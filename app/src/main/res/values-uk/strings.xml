@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ПищеБлок</string>
+
+    <!-- Common -->
+    <string name="ok">ОК</string>
+    <string name="cancel">Скасувати</string>
+    <string name="save">Зберегти</string>
+    <string name="delete">Видалити</string>
+    <string name="edit">Змінити</string>
+    <string name="add">Додати</string>
+    <string name="close">Закрити</string>
+    <string name="search">Пошук</string>
+    <string name="quantity">Кількість</string>
+    <string name="name">Назва</string>
+    <string name="today">Сьогодні</string>
+
+    <!-- Tabs -->
+    <string name="tab_food">Їжа</string>
+    <string name="tab_shopping">Купити</string>
+    <string name="tab_chem">Хімія</string>
+
+    <!-- Titles -->
+    <string name="food_title">Їжа</string>
+    <string name="chem_title">Побутова хімія</string>
+    <string name="shopping_title">Покупки</string>
+
+    <!-- Locations -->
+    <string name="add_room">Додати кімнату</string>
+    <string name="add_floor">Додати поверх</string>
+    <string name="add_place">Додати місце зберігання</string>
+    <string name="add_subplace">Додати секцію</string>
+    <string name="location_name">Назва</string>
+    <string name="choose_icon">Іконка</string>
+    <string name="delete_location_title">Видалити «%1$s»?</string>
+    <string name="delete_location_message">Усе всередині (місця, продукти) теж буде видалено.</string>
+    <string name="type_room">Кімната</string>
+    <string name="type_floor">Поверх</string>
+    <string name="type_place">Місце зберігання</string>
+    <string name="type_section">Секція</string>
+
+    <!-- Empty states -->
+    <string name="empty_rooms_title">Кімнат ще немає</string>
+    <string name="empty_rooms_subtitle">Додайте першу кімнату, наприклад «Кухня»</string>
+    <string name="empty_floors_title">Поверхів ще немає</string>
+    <string name="empty_floors_subtitle">Додайте поверх будинку, наприклад «1-й поверх»</string>
+    <string name="empty_places_title">Всередині порожньо</string>
+    <string name="empty_places_subtitle">Додайте місце зберігання, наприклад «Холодильник»</string>
+    <string name="empty_items_title">Тут поки нічого немає</string>
+    <string name="empty_items_subtitle">Натисніть «+», щоб додати продукт</string>
+    <string name="search_hint">Пошук продуктів…</string>
+    <string name="search_empty">Нічого не знайдено</string>
+    <string name="search_deleted_badge">Видалено</string>
+    <string name="search_place_removed">Місце зберігання видалено</string>
+
+    <!-- Items -->
+    <string name="items_header">Продукти</string>
+    <string name="sections_header">Секції</string>
+    <string name="add_item">Додати продукт</string>
+    <string name="edit_item">Змінити продукт</string>
+    <string name="item_name">Назва продукту</string>
+    <string name="item_qty">Кількість</string>
+    <string name="item_min_qty">Мінімум для оповіщення</string>
+    <string name="item_min_qty_hint">Попередити, коли залишиться стільки або менше</string>
+    <string name="item_expiry">Термін придатності</string>
+    <string name="expiry_optional">не обов’язково</string>
+    <string name="expiry_clear">Вилучити дату</string>
+    <string name="expired_badge">Прострочено</string>
+    <string name="expires_soon_badge">Скоро скінчиться</string>
+    <string name="expires_days_fmt">Залишилось %1$d дн.</string>
+    <string name="low_stock_badge">Закінчується</string>
+    <string name="delete_item_confirm">Видалити «%1$s»?</string>
+
+    <!-- Categories: food -->
+    <string name="cat_veg">Овочі та фрукти</string>
+    <string name="cat_meat">М’ясо та риба</string>
+    <string name="cat_dairy">Молочні продукти</string>
+    <string name="cat_frozen">Заморозка</string>
+    <string name="cat_grains">Крупи та макарони</string>
+    <string name="cat_canned">Консерви</string>
+    <string name="cat_drinks">Напої</string>
+    <string name="cat_spices">Спеції та соуси</string>
+    <string name="cat_sweets">Солодощі</string>
+    <string name="cat_snacks">Снеки</string>
+
+    <!-- Categories: chemicals -->
+    <string name="cat_dish">Посуд та мийка</string>
+    <string name="cat_clean">Прибирання</string>
+    <string name="cat_laundry">Прання</string>
+    <string name="cat_hygiene">Гігієна</string>
+    <string name="cat_care">Догляд за домом</string>
+    <string name="cat_other">Інше</string>
+
+    <!-- Units -->
+    <string name="unit_label">Од.</string>
+    <string name="category_label">Категорія</string>
+    <string name="unit_pcs">шт</string>
+    <string name="unit_pack">упак</string>
+    <string name="unit_bottle">пляш</string>
+    <string name="unit_box">короб</string>
+    <string name="unit_kg">кг</string>
+    <string name="unit_g">г</string>
+    <string name="unit_l">л</string>
+    <string name="unit_ml">мл</string>
+
+    <!-- Shopping -->
+    <string name="section_running_low">Закінчується</string>
+    <string name="section_buy">Купити</string>
+    <string name="shopping_urgent">Терміново</string>
+    <string name="shopping_later">Потім</string>
+    <string name="add_to_list">До списку покупок</string>
+    <string name="buy_qty_question">Скільки докупити?</string>
+    <string name="added_to_list">Додано до списку покупок</string>
+    <string name="clear_done">Прибрати куплене</string>
+    <string name="empty_low_title">Запаси в порядку</string>
+    <string name="empty_low_subtitle">Тут автоматично з’являться продукти з низьким запасом</string>
+    <string name="empty_buy_title">Список порожній</string>
+    <string name="empty_buy_subtitle">Додайте вручну або з «Закінчується»</string>
+    <string name="restock_snack">Позначено як куплено</string>
+    <string name="restock_action">Додати %1$s на склад</string>
+    <string name="buy_name_label">Назва</string>
+    <string name="buy_qty_label">Кількість</string>
+    <string name="delete_entry_confirm">Прибрати «%1$s» зі списку?</string>
+
+    <!-- Auth -->
+    <string name="auth_welcome">Вітаємо у ПищеБлоці</string>
+    <string name="auth_subtitle">Облік запасів продуктів і побутової хімії</string>
+    <string name="auth_title_login">Вхід</string>
+    <string name="auth_title_register">Реєстрація</string>
+    <string name="auth_email">Email</string>
+    <string name="auth_password">Пароль</string>
+    <string name="auth_password_repeat">Повторіть пароль</string>
+    <string name="auth_login">Увійти</string>
+    <string name="auth_register">Створити акаунт</string>
+    <string name="auth_no_account">Немає акаунта? Створіть</string>
+    <string name="auth_have_account">Вже є акаунт? Увійти</string>
+    <string name="auth_forgot">Забули пароль?</string>
+    <string name="auth_reset_sent">Лист для скидання пароля надіслано</string>
+    <string name="auth_error_email_used">Такий email уже використовується</string>
+    <string name="auth_error_bad_email">Некоректний email</string>
+    <string name="auth_error_weak_password">Пароль має бути не коротше 6 символів</string>
+    <string name="auth_error_no_user">Акаунт з таким email не знайдено</string>
+    <string name="auth_error_invalid_credentials">Невірний email або пароль. Якщо акаунта ще немає — створіть його нижче.</string>
+    <string name="auth_error_wrong_password">Невірний пароль</string>
+    <string name="auth_error_network">Помилка мережі — перевірте з’єднання</string>
+    <string name="auth_error_too_many">Забагато спроб, спробуйте пізніше</string>
+    <string name="auth_error_password_match">Паролі не збігаються</string>
+    <string name="auth_error_fill_fields">Заповніть усі поля</string>
+    <string name="auth_error_generic">Помилка входу: %1$s</string>
+
+    <!-- Account & sync -->
+    <string name="account_sign_out">Вийти</string>
+    <string name="sync_mode_off">Хмара не налаштована</string>
+    <string name="sync_mode_off_hint">Додайте ключі Firebase у res/values/firebase_config.xml, щоб увімкнути синхронізацію</string>
+    <string name="sync_status_syncing">Синхронізація…</string>
+    <string name="sync_status_ok">Синхронізовано</string>
+    <string name="sync_status_offline">Немає мережі — синхронізуємо пізніше</string>
+    <string name="sync_status_error">Помилка синхронізації</string>
+    <string name="sync_banner_local">Локальний режим — дані лише на цьому пристрої</string>
+
+    <!-- Language -->
+    <string name="language_title">Мова</string>
+    <string name="language_system">Як у системі</string>
+
+    <!-- Barcode scanner -->
+    <string name="scan_barcode">Сканувати штрих-код</string>
+    <string name="scan_hint">Наведіть камеру на штрих-код</string>
+    <string name="scan_searching">Шукаю продукт…</string>
+    <string name="scan_permission">Для сканування потрібен доступ до камери</string>
+    <string name="barcode_label">Штрих-код: %1$s</string>
+
+    <!-- Notifications -->
+    <string name="notif_channel">Нагадування про запаси</string>
+    <string name="notif_text">Прострочено: %1$d · Скоро скінчаться: %2$d · Закінчуються: %3$d</string>
+    <string name="notif_text_buy">У списку купити: %1$d</string>
+
+    <!-- Widget -->
+    <string name="widget_description">Зведення запасів</string>
+    <string name="widget_expired">Прострочено</string>
+    <string name="widget_low">Закінчується</string>
+    <string name="widget_buy">Купити</string>
+
+    <!-- Misc / a11y -->
+    <string name="items_count_zero">Немає позицій</string>
+    <string name="cd_search">Пошук</string>
+    <string name="cd_account">Акаунт</string>
+    <string name="cd_sync">Статус синхронізації</string>
+    <string name="cd_back">Назад</string>
+
+    <plurals name="items_count">
+        <item quantity="one">%1$d позиція</item>
+        <item quantity="few">%1$d позиції</item>
+        <item quantity="many">%1$d позицій</item>
+        <item quantity="other">%1$d позиції</item>
+    </plurals>
+    <plurals name="low_inside">
+        <item quantity="one">Закінчується: %1$d</item>
+        <item quantity="few">Закінчується: %1$d</item>
+        <item quantity="many">Закінчується: %1$d</item>
+        <item quantity="other">Закінчується: %1$d</item>
+    </plurals>
+</resources>

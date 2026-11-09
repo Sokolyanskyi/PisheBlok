@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- fridge body -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M41,24 H67 A5,5 0 0 1 72,29 V79 A5,5 0 0 1 67,84 H41 A5,5 0 0 1 36,79 V29 A5,5 0 0 1 41,24 Z" />
+    <!-- divider -->
+    <path
+        android:fillColor="#8C2C00"
+        android:pathData="M36,45.5 H72 V49.5 H36 Z" />
+    <!-- freezer handle -->
+    <path
+        android:fillColor="#8C2C00"
+        android:pathData="M40,31 H46.5 A1.5,1.5 0 0 1 48,32.5 V32.5 A1.5,1.5 0 0 1 46.5,34 H40 Z" />
+    <!-- fridge handle -->
+    <path
+        android:fillColor="#8C2C00"
+        android:pathData="M40,53.5 H46.5 A1.5,1.5 0 0 1 48,55 V55 A1.5,1.5 0 0 1 46.5,56.5 H40 Z" />
+</vector>

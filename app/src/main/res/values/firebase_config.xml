@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Firebase configuration (manual init, no google-services.json needed).
+      Project: PisheBlok (pisheblok-7663d), plan: Spark (free).
+      Auth: Email/Password enabled. Firestore: eur3, rules published.
+    -->
+    <string name="firebase_api_key" translatable="false">AIzaSyDZQ22DrfVHBr9ebzMkRSfr3pQaxJohkTI</string>
+    <string name="firebase_project_id" translatable="false">pisheblok-7663d</string>
+    <string name="firebase_app_id" translatable="false">1:412324587889:android:5ac3c1f1001f10d1f7aed0</string>
+    <string name="firebase_storage_bucket" translatable="false">pisheblok-7663d.firebasestorage.app</string>
+</resources>
