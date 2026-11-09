@@ -162,6 +162,19 @@
     <string name="language_title">Language</string>
     <string name="language_system">System default</string>
 
+    <!-- Theme -->
+    <string name="theme_title">Color scheme</string>
+    <string name="scheme_terracotta">Terracotta</string>
+    <string name="scheme_emerald">Emerald</string>
+    <string name="scheme_ocean">Ocean</string>
+    <string name="scheme_lavander">Lavender</string>
+    <string name="scheme_strawberry">Strawberry</string>
+    <string name="scheme_sky">Sky</string>
+    <string name="scheme_lime">Lime</string>
+    <string name="scheme_indigo">Indigo</string>
+    <string name="scheme_coffee">Coffee</string>
+    <string name="scheme_slate">Slate</string>
+
     <!-- Barcode scanner -->
     <string name="scan_barcode">Scan barcode</string>
     <string name="scan_hint">Point the camera at the barcode</string>

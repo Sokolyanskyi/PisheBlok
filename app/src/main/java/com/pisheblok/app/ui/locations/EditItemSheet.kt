@@ -35,6 +35,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
@@ -120,7 +121,9 @@ fun EditItemSheet(
                 supportingText = {
                     if (barcode != null) Text(stringResource(R.string.barcode_label, barcode))
                 },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("item_name_field"),
                 shape = MaterialTheme.shapes.small,
             )
             if (filteredSuggestions.isNotEmpty()) {
@@ -169,7 +172,9 @@ fun EditItemSheet(
                     label = { Text(stringResource(R.string.item_qty)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag("item_qty_field"),
                     shape = MaterialTheme.shapes.small,
                 )
                 DropdownField(
@@ -216,7 +221,9 @@ fun EditItemSheet(
                 supportingText = { Text(stringResource(R.string.item_min_qty_hint)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("item_min_field"),
                 shape = MaterialTheme.shapes.small,
             )
             Button(

@@ -162,6 +162,19 @@
     <string name="language_title">Мова</string>
     <string name="language_system">Як у системі</string>
 
+    <!-- Theme -->
+    <string name="theme_title">Колірна схема</string>
+    <string name="scheme_terracotta">Терракота</string>
+    <string name="scheme_emerald">Смарагд</string>
+    <string name="scheme_ocean">Океан</string>
+    <string name="scheme_lavander">Лаванда</string>
+    <string name="scheme_strawberry">Полуниця</string>
+    <string name="scheme_sky">Небо</string>
+    <string name="scheme_lime">Лайм</string>
+    <string name="scheme_indigo">Індиго</string>
+    <string name="scheme_coffee">Кава</string>
+    <string name="scheme_slate">Графіт</string>
+
     <!-- Barcode scanner -->
     <string name="scan_barcode">Сканувати штрих-код</string>
     <string name="scan_hint">Наведіть камеру на штрих-код</string>

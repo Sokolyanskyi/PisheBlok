@@ -6,7 +6,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 
-private val LightColors = lightColorScheme(
+val LightColors = lightColorScheme(
     primary = PrimaryLight,
     onPrimary = OnPrimaryLight,
     primaryContainer = PrimaryContainerLight,
@@ -41,7 +41,7 @@ private val LightColors = lightColorScheme(
     surfaceContainerHighest = SurfaceContainerHighestLight,
 )
 
-private val DarkColors = darkColorScheme(
+val DarkColors = darkColorScheme(
     primary = PrimaryDark,
     onPrimary = OnPrimaryDark,
     primaryContainer = PrimaryContainerDark,
@@ -78,11 +78,12 @@ private val DarkColors = darkColorScheme(
 
 @Composable
 fun PisheBlokTheme(
+    scheme: ThemeScheme = ThemeScheme.TERRACOTTA,
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit,
 ) {
     MaterialTheme(
-        colorScheme = if (darkTheme) DarkColors else LightColors,
+        colorScheme = if (darkTheme) scheme.darkColors() else scheme.lightColors(),
         typography = PisheBlokTypography,
         shapes = PisheBlokShapes,
         content = content,

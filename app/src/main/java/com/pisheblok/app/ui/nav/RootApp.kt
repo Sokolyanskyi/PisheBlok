@@ -5,6 +5,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,8 +14,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CloudDone
 import androidx.compose.material.icons.rounded.CloudOff
@@ -22,6 +27,7 @@ import androidx.compose.material.icons.rounded.CloudSync
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.Logout
 import androidx.compose.material.icons.rounded.LunchDining
+import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Science
 import androidx.compose.material.icons.rounded.ShoppingCart
@@ -79,6 +85,9 @@ import com.pisheblok.app.ui.auth.AuthScreen
 import com.pisheblok.app.ui.components.LocalAppContainer
 import com.pisheblok.app.ui.locations.LocationsScreen
 import com.pisheblok.app.ui.shopping.ShoppingScreen
+import com.pisheblok.app.ui.theme.LocalSchemeState
+import com.pisheblok.app.ui.theme.ThemeScheme
+import com.pisheblok.app.ui.theme.previewColors
 import androidx.compose.runtime.CompositionLocalProvider
 
 private enum class MainTab(val icon: ImageVector, val labelRes: Int) {
@@ -117,6 +126,7 @@ fun MainScaffold() {
 
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     var showLanguageDialog by rememberSaveable { mutableStateOf(false) }
+    var showThemeDialog by rememberSaveable { mutableStateOf(false) }
 
     // ask once for notification permission (Android 13+)
     val notifPermLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
@@ -134,6 +144,7 @@ fun MainScaffold() {
                 authState = authState,
                 syncStatus = syncStatus,
                 onLanguage = { showLanguageDialog = true },
+                onTheme = { showThemeDialog = true },
                 onSignOut = { container.auth.signOut() },
             )
         },
@@ -143,7 +154,7 @@ fun MainScaffold() {
                     NavigationBarItem(
                         selected = selectedTab == index,
                         onClick = { selectedTab = index },
-                        icon = { Icon(tab.icon, contentDescription = null) },
+                        icon = { Icon(tab.icon, contentDescription = tab.name) },
                         label = { Text(stringResource(tab.labelRes)) },
                     )
                 }
@@ -178,6 +189,9 @@ fun MainScaffold() {
     if (showLanguageDialog) {
         LanguageDialog(onDismiss = { showLanguageDialog = false })
     }
+    if (showThemeDialog) {
+        ThemeDialog(onDismiss = { showThemeDialog = false })
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -186,6 +200,7 @@ private fun MainTopBar(
     authState: AuthState,
     syncStatus: SyncStatus,
     onLanguage: () -> Unit,
+    onTheme: () -> Unit,
     onSignOut: () -> Unit,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
@@ -255,6 +270,14 @@ private fun MainTopBar(
                         onClick = {},
                     )
                     HorizontalDivider()
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.theme_title)) },
+                        leadingIcon = { Icon(Icons.Rounded.Palette, contentDescription = null) },
+                        onClick = {
+                            menuOpen = false
+                            onTheme()
+                        },
+                    )
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.language_title)) },
                         leadingIcon = { Icon(Icons.Rounded.Language, contentDescription = null) },
@@ -361,4 +384,78 @@ private fun currentLangChoice(): LangChoice {
         tags.startsWith("en") -> LangChoice.EN
         else -> LangChoice.SYSTEM
     }
+}
+
+private fun ThemeScheme.nameRes(): Int = when (this) {
+    ThemeScheme.TERRACOTTA -> R.string.scheme_terracotta
+    ThemeScheme.EMERALD -> R.string.scheme_emerald
+    ThemeScheme.OCEAN -> R.string.scheme_ocean
+    ThemeScheme.LAVANDER -> R.string.scheme_lavander
+    ThemeScheme.STRAWBERRY -> R.string.scheme_strawberry
+    ThemeScheme.SKY -> R.string.scheme_sky
+    ThemeScheme.LIME -> R.string.scheme_lime
+    ThemeScheme.INDIGO -> R.string.scheme_indigo
+    ThemeScheme.COFFEE -> R.string.scheme_coffee
+    ThemeScheme.SLATE -> R.string.scheme_slate
+}
+
+@Composable
+private fun ThemeDialog(onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val schemeState = LocalSchemeState.current
+    var selection by rememberSaveable { mutableStateOf(schemeState.value.name) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.theme_title)) },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                ThemeScheme.entries.forEach { choice ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .selectable(selected = selection == choice.name) {
+                                selection = choice.name
+                            }
+                            .padding(vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            choice.previewColors().forEach { color ->
+                                Box(
+                                    modifier = Modifier
+                                        .size(18.dp)
+                                        .background(color, CircleShape)
+                                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
+                                )
+                            }
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        RadioButton(
+                            selected = selection == choice.name,
+                            onClick = { selection = choice.name },
+                        )
+                        Text(stringResource(choice.nameRes()), style = MaterialTheme.typography.bodyLarge)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val choice = ThemeScheme.entries.firstOrNull { it.name == selection } ?: ThemeScheme.TERRACOTTA
+                schemeState.value = choice
+                com.pisheblok.app.ui.theme.ThemePrefs.save(context, choice)
+                onDismiss()
+            }) {
+                Text(stringResource(R.string.ok))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+        },
+    )
 }

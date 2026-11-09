@@ -44,6 +44,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -117,7 +118,8 @@ fun LocationsScreen(section: Section, title: String) {
                             shape = MaterialTheme.shapes.small,
                             modifier = Modifier
                                 .weight(1f)
-                                .focusRequester(focusRequester),
+                                .focusRequester(focusRequester)
+                                .testTag("search_field"),
                         )
                     } else {
                         Text(
