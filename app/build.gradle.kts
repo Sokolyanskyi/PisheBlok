@@ -12,8 +12,8 @@ android {
         applicationId = "com.pisheblok.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 7
-        versionName = "1.1.0"
+        versionCode = 8
+        versionName = "1.1.1"
         resourceConfigurations += listOf("en", "ru", "uk")
     }
 

@@ -82,12 +82,14 @@ fun EditItemSheet(
     val barcode: String? = barcodeRaw.ifBlank { null }
     var showDatePicker by rememberSaveable { mutableStateOf(false) }
 
+    var scanMissed by rememberSaveable { mutableStateOf(false) }
     val scanLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
     ) { res ->
         if (res.resultCode == android.app.Activity.RESULT_OK) {
             barcodeRaw = res.data?.getStringExtra("barcode") ?: ""
             val productName = res.data?.getStringExtra("productName").orEmpty()
+            scanMissed = productName.isBlank()
             if (productName.isNotBlank()) name = productName
         }
     }
@@ -143,6 +145,7 @@ fun EditItemSheet(
             }
             OutlinedButton(
                 onClick = {
+                    scanMissed = false
                     scanLauncher.launch(android.content.Intent(context, com.pisheblok.app.scanner.ScannerActivity::class.java))
                 },
                 modifier = Modifier.fillMaxWidth(),
@@ -151,6 +154,13 @@ fun EditItemSheet(
                 Icon(Icons.Rounded.QrCodeScanner, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
                 Text(stringResource(R.string.scan_barcode))
+            }
+            if (scanMissed) {
+                Text(
+                    stringResource(R.string.scan_not_found),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedTextField(

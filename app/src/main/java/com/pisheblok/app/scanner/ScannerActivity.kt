@@ -202,7 +202,7 @@ private fun CameraScanner(onBarcode: (String, String?) -> Unit) {
                         done = true
                         searching = true
                         scope.launch {
-                            val name = lookupOpenFoodFacts(raw)
+                            val name = lookupProduct(raw)
                             onBarcode(raw, name)
                         }
                     }
@@ -271,10 +271,18 @@ private fun CameraScanner(onBarcode: (String, String?) -> Unit) {
     }
 }
 
-/** Looks the barcode up in the free Open Food Facts database; returns "Name · Brand" or null. */
-private suspend fun lookupOpenFoodFacts(barcode: String): String? = withContext(Dispatchers.IO) {
+/**
+ * Looks the barcode up in the free open databases (Open Food Facts, then
+ * Open Products Facts for non-food goods). Ukrainian name is preferred,
+ * then Russian, then the generic one. Returns "Name · Brand" or null.
+ */
+private suspend fun lookupProduct(barcode: String): String? =
+    lookupInDatabase("https://world.openfoodfacts.org", barcode)
+        ?: lookupInDatabase("https://world.openproductsfacts.org", barcode)
+
+private suspend fun lookupInDatabase(host: String, barcode: String): String? = withContext(Dispatchers.IO) {
     try {
-        val url = URL("https://world.openfoodfacts.org/api/v2/product/$barcode.json?fields=product_name,product_name_ru,brands")
+        val url = URL("$host/api/v2/product/$barcode.json?fields=product_name,product_name_ru,product_name_ua,brands")
         val conn = url.openConnection() as HttpURLConnection
         conn.connectTimeout = 6000
         conn.readTimeout = 6000
@@ -282,7 +290,9 @@ private suspend fun lookupOpenFoodFacts(barcode: String): String? = withContext(
         val obj = JSONObject(body)
         if (obj.optString("status") == "0") return@withContext null
         val product = obj.getJSONObject("product")
-        val name = product.optString("product_name_ru").ifBlank { product.optString("product_name") }
+        val name = product.optString("product_name_ua")
+            .ifBlank { product.optString("product_name_ru") }
+            .ifBlank { product.optString("product_name") }
         val brands = product.optString("brands")
         listOf(name, brands)
             .filter { it.isNotBlank() }

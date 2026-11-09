@@ -167,6 +167,7 @@
     <string name="scan_hint">Наведите камеру на штрих-код</string>
     <string name="scan_searching">Ищу продукт в базе…</string>
     <string name="scan_permission">Для сканирования нужен доступ к камере</string>
+    <string name="scan_not_found">Товар не найден в открытой базе — введите название вручную (штрих-код сохранён).</string>
     <string name="barcode_label">Штрих-код: %1$s</string>
 
     <!-- Notifications -->

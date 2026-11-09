@@ -167,6 +167,7 @@
     <string name="scan_hint">Point the camera at the barcode</string>
     <string name="scan_searching">Looking up the product…</string>
     <string name="scan_permission">Camera access is needed to scan barcodes</string>
+    <string name="scan_not_found">Product not found in the open database — please enter the name manually (the barcode is saved).</string>
     <string name="barcode_label">Barcode: %1$s</string>
 
     <!-- Notifications -->
