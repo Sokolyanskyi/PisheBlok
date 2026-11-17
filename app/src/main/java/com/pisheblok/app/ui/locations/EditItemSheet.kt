@@ -251,10 +251,6 @@ fun EditItemSheet(
                 onClick = {
                     onSave(name, qty!!, unit, category, expiry, minQty, barcode)
                 },
-                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.tertiary,
-                    contentColor = MaterialTheme.colorScheme.onTertiary,
-                ),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp),

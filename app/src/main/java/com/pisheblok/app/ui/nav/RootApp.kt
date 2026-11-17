@@ -481,6 +481,7 @@ private fun currentLangChoice(): LangChoice {
 }
 
 private fun ThemeScheme.nameRes(): Int = when (this) {
+    ThemeScheme.NEON -> R.string.scheme_neon
     ThemeScheme.TERRACOTTA -> R.string.scheme_terracotta
     ThemeScheme.EMERALD -> R.string.scheme_emerald
     ThemeScheme.OCEAN -> R.string.scheme_ocean
@@ -497,7 +498,9 @@ private fun ThemeScheme.nameRes(): Int = when (this) {
 private fun ThemeDialog(onDismiss: () -> Unit) {
     val context = LocalContext.current
     val schemeState = LocalSchemeState.current
+    val modeState = com.pisheblok.app.ui.theme.LocalThemeMode.current
     var selection by rememberSaveable { mutableStateOf(schemeState.value.name) }
+    var modeSelection by rememberSaveable { mutableStateOf(modeState.value.name) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -508,6 +511,47 @@ private fun ThemeDialog(onDismiss: () -> Unit) {
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState()),
             ) {
+                // ---------- режим светлоты ----------
+                Text(
+                    stringResource(R.string.mode_section),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 4.dp),
+                )
+                com.pisheblok.app.ui.theme.ThemeMode.entries.forEach { choice ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .selectable(selected = modeSelection == choice.name) {
+                                modeSelection = choice.name
+                            }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(
+                            selected = modeSelection == choice.name,
+                            onClick = { modeSelection = choice.name },
+                        )
+                        Text(
+                            stringResource(
+                                when (choice) {
+                                    com.pisheblok.app.ui.theme.ThemeMode.SYSTEM -> R.string.mode_system
+                                    com.pisheblok.app.ui.theme.ThemeMode.LIGHT -> R.string.mode_light
+                                    com.pisheblok.app.ui.theme.ThemeMode.DARK -> R.string.mode_dark
+                                }
+                            ),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    }
+                }
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                // ---------- палитра ----------
+                Text(
+                    stringResource(R.string.palette_section),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 4.dp),
+                )
                 ThemeScheme.entries.forEach { choice ->
                     Row(
                         modifier = Modifier
@@ -540,9 +584,13 @@ private fun ThemeDialog(onDismiss: () -> Unit) {
         },
         confirmButton = {
             TextButton(onClick = {
-                val choice = ThemeScheme.entries.firstOrNull { it.name == selection } ?: ThemeScheme.TERRACOTTA
+                val choice = ThemeScheme.entries.firstOrNull { it.name == selection } ?: ThemeScheme.NEON
+                val modeChoice = com.pisheblok.app.ui.theme.ThemeMode.entries.firstOrNull { it.name == modeSelection }
+                    ?: com.pisheblok.app.ui.theme.ThemeMode.SYSTEM
                 schemeState.value = choice
+                modeState.value = modeChoice
                 com.pisheblok.app.ui.theme.ThemePrefs.save(context, choice)
+                com.pisheblok.app.ui.theme.ThemePrefs.saveMode(context, modeChoice)
                 onDismiss()
             }) {
                 Text(stringResource(R.string.ok))

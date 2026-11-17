@@ -221,8 +221,6 @@ fun ShoppingScreen() {
             onClick = { showManualAdd = true },
             icon = { Icon(Icons.Rounded.Add, contentDescription = null) },
             text = { Text(stringResource(R.string.add)) },
-            containerColor = MaterialTheme.colorScheme.tertiary,
-            contentColor = MaterialTheme.colorScheme.onTertiary,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(20.dp),

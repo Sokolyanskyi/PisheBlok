@@ -1,6 +1,5 @@
 package com.pisheblok.app.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -10,6 +9,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
+import com.pisheblok.app.ui.theme.LocalDarkTheme
 
 /**
  * Дизайн-токены PisheBlok: формы, шкала отступов, градиенты.
@@ -54,7 +54,7 @@ object Blok {
     /** Подложка деструктивных зон (hold-кнопки, бейджи протухшего). */
     @Composable
     fun dangerContainer(): Color =
-        if (isSystemInDarkTheme()) MaterialTheme.colorScheme.error.copy(alpha = 0.22f)
+        if (LocalDarkTheme.current) MaterialTheme.colorScheme.error.copy(alpha = 0.22f)
         else MaterialTheme.colorScheme.errorContainer
 }
 
@@ -66,6 +66,6 @@ object Blok {
 fun Modifier.blokCardShadow(shape: Shape = Blok.card): Modifier = this.shadow(
     elevation = 2.dp,
     shape = shape,
-    ambientColor = if (isSystemInDarkTheme()) Color.Transparent else Color(0x1F4C6B48),
-    spotColor = if (isSystemInDarkTheme()) Color.Transparent else Color(0x334C6B48),
+    ambientColor = if (LocalDarkTheme.current) Color.Transparent else Color(0x1F4C6B48),
+    spotColor = if (LocalDarkTheme.current) Color.Transparent else Color(0x334C6B48),
 )

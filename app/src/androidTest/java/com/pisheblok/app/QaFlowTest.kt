@@ -98,8 +98,10 @@ class QaFlowTest {
             shopping.filter { it.name.startsWith("QA_") }.forEach { repo().deleteShopping(it) }
         }
         ThemePrefs.save(
-            androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext,
-            com.pisheblok.app.ui.theme.ThemeScheme.TERRACOTTA,
+            androidx.test.platform.app.InstrumentationRegistry
+                .getInstrumentation()
+                .targetContext,
+            com.pisheblok.app.ui.theme.ThemeScheme.NEON,
         )
     }
 

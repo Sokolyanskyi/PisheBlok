@@ -149,7 +149,13 @@
 
     <!-- Theme -->
     <string name="theme_title">Color scheme</string>
+    <string name="scheme_neon">Neon Lime</string>
     <string name="scheme_terracotta">Fresh Kitchen</string>
+    <string name="mode_section">Mode</string>
+    <string name="mode_system">Follow system</string>
+    <string name="mode_light">Light</string>
+    <string name="mode_dark">Dark</string>
+    <string name="palette_section">Palette</string>
     <string name="scheme_emerald">Emerald</string>
     <string name="scheme_ocean">Ocean</string>
     <string name="scheme_lavander">Lavender</string>

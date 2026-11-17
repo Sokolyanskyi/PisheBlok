@@ -281,8 +281,6 @@ fun LocationsScreen(section: Section, title: String, onGoShopping: () -> Unit = 
                 onClick = onAddItem,
                 icon = { Icon(Icons.Rounded.Add, contentDescription = null) },
                 text = { Text(stringResource(R.string.add_item)) },
-                containerColor = MaterialTheme.colorScheme.tertiary,
-                contentColor = MaterialTheme.colorScheme.onTertiary,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(20.dp)

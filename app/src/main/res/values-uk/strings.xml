@@ -149,7 +149,13 @@
 
     <!-- Theme -->
     <string name="theme_title">Колірна схема</string>
+    <string name="scheme_neon">Неоновий лайм</string>
     <string name="scheme_terracotta">Свіжа кухня</string>
+    <string name="mode_section">Режим</string>
+    <string name="mode_system">Як у системі</string>
+    <string name="mode_light">Світла</string>
+    <string name="mode_dark">Темна</string>
+    <string name="palette_section">Палітра</string>
     <string name="scheme_emerald">Смарагд</string>
     <string name="scheme_ocean">Океан</string>
     <string name="scheme_lavander">Лаванда</string>

@@ -7,7 +7,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+
+/** Фактическая светлота текущей темы (учитывает ручной режим, не только систему). */
+val LocalDarkTheme = staticCompositionLocalOf { false }
 
 val LightColors = lightColorScheme(
     primary = PrimaryLight,
@@ -79,6 +84,76 @@ val DarkColors = darkColorScheme(
     surfaceContainerHighest = SurfaceContainerHighestDark,
 )
 
+val NeonLightColors = lightColorScheme(
+    primary = NeonPrimaryLight,
+    onPrimary = NeonOnPrimaryLight,
+    primaryContainer = NeonPrimaryContainerLight,
+    onPrimaryContainer = NeonOnPrimaryContainerLight,
+    secondary = NeonSecondaryLight,
+    onSecondary = NeonOnSecondaryLight,
+    secondaryContainer = NeonSecondaryContainerLight,
+    onSecondaryContainer = NeonOnSecondaryContainerLight,
+    tertiary = NeonTertiaryLight,
+    onTertiary = NeonOnTertiaryLight,
+    tertiaryContainer = NeonTertiaryContainerLight,
+    onTertiaryContainer = NeonOnTertiaryContainerLight,
+    error = NeonErrorLight,
+    onError = NeonOnErrorLight,
+    errorContainer = NeonErrorContainerLight,
+    onErrorContainer = NeonOnErrorContainerLight,
+    background = NeonBackgroundLight,
+    onBackground = NeonOnBackgroundLight,
+    surface = NeonSurfaceLight,
+    onSurface = NeonOnSurfaceLight,
+    surfaceVariant = NeonSurfaceVariantLight,
+    onSurfaceVariant = NeonOnSurfaceVariantLight,
+    outline = NeonOutlineLight,
+    outlineVariant = NeonOutlineVariantLight,
+    inverseSurface = NeonInverseSurfaceLight,
+    inverseOnSurface = NeonInverseOnSurfaceLight,
+    scrim = NeonScrimLight,
+    surfaceContainerLowest = NeonSurfaceContainerLowestLight,
+    surfaceContainerLow = NeonSurfaceContainerLowLight,
+    surfaceContainer = NeonSurfaceContainerLight,
+    surfaceContainerHigh = NeonSurfaceContainerHighLight,
+    surfaceContainerHighest = NeonSurfaceContainerHighestLight,
+)
+
+val NeonDarkColors = darkColorScheme(
+    primary = NeonPrimaryDark,
+    onPrimary = NeonOnPrimaryDark,
+    primaryContainer = NeonPrimaryContainerDark,
+    onPrimaryContainer = NeonOnPrimaryContainerDark,
+    secondary = NeonSecondaryDark,
+    onSecondary = NeonOnSecondaryDark,
+    secondaryContainer = NeonSecondaryContainerDark,
+    onSecondaryContainer = NeonOnSecondaryContainerDark,
+    tertiary = NeonTertiaryDark,
+    onTertiary = NeonOnTertiaryDark,
+    tertiaryContainer = NeonTertiaryContainerDark,
+    onTertiaryContainer = NeonOnTertiaryContainerDark,
+    error = NeonErrorDark,
+    onError = NeonOnErrorDark,
+    errorContainer = NeonErrorContainerDark,
+    onErrorContainer = NeonOnErrorContainerDark,
+    background = NeonBackgroundDark,
+    onBackground = NeonOnBackgroundDark,
+    surface = NeonSurfaceDark,
+    onSurface = NeonOnSurfaceDark,
+    surfaceVariant = NeonSurfaceVariantDark,
+    onSurfaceVariant = NeonOnSurfaceVariantDark,
+    outline = NeonOutlineDark,
+    outlineVariant = NeonOutlineVariantDark,
+    inverseSurface = NeonInverseSurfaceDark,
+    inverseOnSurface = NeonInverseOnSurfaceDark,
+    scrim = NeonScrimDark,
+    surfaceContainerLowest = NeonSurfaceContainerLowestDark,
+    surfaceContainerLow = NeonSurfaceContainerLowDark,
+    surfaceContainer = NeonSurfaceContainerDark,
+    surfaceContainerHigh = NeonSurfaceContainerHighDark,
+    surfaceContainerHighest = NeonSurfaceContainerHighestDark,
+)
+
 /**
  * Мягкое перетекание цветов при смене темы: MaterialTheme получает схему,
  * у которой каждый цвет анимируется к целевому значению. Без этого смена
@@ -125,15 +200,17 @@ private fun animatedScheme(target: ColorScheme): ColorScheme {
 
 @Composable
 fun PisheBlokTheme(
-    scheme: ThemeScheme = ThemeScheme.TERRACOTTA,
+    scheme: ThemeScheme = ThemeScheme.NEON,
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit,
 ) {
     val target = if (darkTheme) scheme.darkColors() else scheme.lightColors()
-    MaterialTheme(
-        colorScheme = animatedScheme(target),
-        typography = PisheBlokTypography,
-        shapes = PisheBlokShapes,
-        content = content,
-    )
+    CompositionLocalProvider(LocalDarkTheme provides darkTheme) {
+        MaterialTheme(
+            colorScheme = animatedScheme(target),
+            typography = PisheBlokTypography,
+            shapes = PisheBlokShapes,
+            content = content,
+        )
+    }
 }

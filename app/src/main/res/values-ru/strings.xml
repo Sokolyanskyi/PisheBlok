@@ -149,7 +149,13 @@
 
     <!-- Theme -->
     <string name="theme_title">Цветовая схема</string>
+    <string name="scheme_neon">Неон-лайм</string>
     <string name="scheme_terracotta">Свежая кухня</string>
+    <string name="mode_section">Режим</string>
+    <string name="mode_system">Как в системе</string>
+    <string name="mode_light">Светлая</string>
+    <string name="mode_dark">Тёмная</string>
+    <string name="palette_section">Палитра</string>
     <string name="scheme_emerald">Изумруд</string>
     <string name="scheme_ocean">Океан</string>
     <string name="scheme_lavander">Лаванда</string>

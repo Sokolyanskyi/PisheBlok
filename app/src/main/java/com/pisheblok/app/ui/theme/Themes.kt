@@ -8,8 +8,11 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
-/** Available color schemes; TERRACOTTA is the default hand-crafted «fresh kitchen» palette. */
-enum class ThemeScheme { TERRACOTTA, EMERALD, OCEAN, LAVANDER, STRAWBERRY, SKY, LIME, INDIGO, COFFEE, SLATE }
+/** Available color schemes; NEON is the default hand-crafted «lime on graphite» palette. */
+enum class ThemeScheme { NEON, TERRACOTTA, EMERALD, OCEAN, LAVANDER, STRAWBERRY, SKY, LIME, INDIGO, COFFEE, SLATE }
+
+/** Режим светлоты: следовать системе или принудительно светлая/тёмная. */
+enum class ThemeMode { SYSTEM, LIGHT, DARK }
 
 // Тёплые базы «свежей кухни»: вместо чистых бело-чёрных нейтралей все
 // производные палитры лерпятся к крему/тёплым чернилам — интерьер общий.
@@ -31,6 +34,7 @@ private fun Color.lerpTo(target: Color, fraction: Float): Color = Color(
 private data class Seeds(val primary: Color, val secondary: Color, val tertiary: Color)
 
 private fun ThemeScheme.seeds(): Seeds = when (this) {
+    ThemeScheme.NEON -> Seeds(Color(0xFFC8F044), Color(0xFFFFD44F), Color(0xFFFFB68C))
     ThemeScheme.TERRACOTTA -> Seeds(Color(0xFF4C6B48), Color(0xFF55794A), Color(0xFFA65432))
     ThemeScheme.EMERALD -> Seeds(Color(0xFF147B56), Color(0xFF3E6B4F), Color(0xFF8A5A2B))
     ThemeScheme.OCEAN -> Seeds(Color(0xFF1565C0), Color(0xFF2E6D62), Color(0xFF7059A6))
@@ -116,11 +120,13 @@ private fun deriveDark(p: Color, s: Color, t: Color): ColorScheme = darkColorSch
 )
 
 fun ThemeScheme.lightColors(): ColorScheme = when (this) {
+    ThemeScheme.NEON -> NeonLightColors
     ThemeScheme.TERRACOTTA -> LightColors
     else -> seeds().let { deriveLight(it.primary, it.secondary, it.tertiary) }
 }
 
 fun ThemeScheme.darkColors(): ColorScheme = when (this) {
+    ThemeScheme.NEON -> NeonDarkColors
     ThemeScheme.TERRACOTTA -> DarkColors
     else -> seeds().let { deriveDark(it.primary, it.secondary, it.tertiary) }
 }
@@ -133,18 +139,35 @@ val LocalSchemeState = staticCompositionLocalOf<MutableState<ThemeScheme>> {
     error("SchemeState not provided")
 }
 
+/** Live light/dark mode selection shared with the settings dialog. */
+val LocalThemeMode = staticCompositionLocalOf<MutableState<ThemeMode>> {
+    error("ThemeModeState not provided")
+}
+
 object ThemePrefs {
     private const val PREFS = "pisheblok_settings"
     private const val KEY = "theme_scheme"
+    private const val MODE_KEY = "theme_mode"
 
     fun load(context: Context): ThemeScheme {
         val name = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getString(KEY, null) ?: return ThemeScheme.TERRACOTTA
-        return runCatching { ThemeScheme.valueOf(name) }.getOrDefault(ThemeScheme.TERRACOTTA)
+            .getString(KEY, null) ?: return ThemeScheme.NEON
+        return runCatching { ThemeScheme.valueOf(name) }.getOrDefault(ThemeScheme.NEON)
     }
 
     fun save(context: Context, scheme: ThemeScheme) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit().putString(KEY, scheme.name).apply()
+    }
+
+    fun loadMode(context: Context): ThemeMode {
+        val name = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString(MODE_KEY, null) ?: return ThemeMode.SYSTEM
+        return runCatching { ThemeMode.valueOf(name) }.getOrDefault(ThemeMode.SYSTEM)
+    }
+
+    fun saveMode(context: Context, mode: ThemeMode) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().putString(MODE_KEY, mode.name).apply()
     }
 }
