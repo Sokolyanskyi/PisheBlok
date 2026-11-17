@@ -1,8 +1,12 @@
 package com.pisheblok.app.ui.nav
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -12,6 +16,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -40,8 +47,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -50,6 +55,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -60,10 +66,6 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.width
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
@@ -71,11 +73,18 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
 import com.pisheblok.app.PisheBlokApp
 import com.pisheblok.app.R
 import com.pisheblok.app.auth.AuthState
@@ -84,28 +93,51 @@ import com.pisheblok.app.sync.SyncStatus
 import com.pisheblok.app.ui.auth.AuthScreen
 import com.pisheblok.app.ui.components.LocalAppContainer
 import com.pisheblok.app.ui.locations.LocationsScreen
+import com.pisheblok.app.ui.motion.LocalMotionEnabled
+import com.pisheblok.app.ui.motion.components.PillTab
+import com.pisheblok.app.ui.motion.components.SpringPillNav
+import com.pisheblok.app.ui.motion.rememberMotionEnabled
 import com.pisheblok.app.ui.shopping.ShoppingScreen
 import com.pisheblok.app.ui.theme.LocalSchemeState
 import com.pisheblok.app.ui.theme.ThemeScheme
 import com.pisheblok.app.ui.theme.previewColors
-import androidx.compose.runtime.CompositionLocalProvider
 
-private enum class MainTab(val icon: ImageVector, val labelRes: Int) {
-    FOOD(Icons.Rounded.LunchDining, R.string.tab_food),
-    SHOPPING(Icons.Rounded.ShoppingCart, R.string.tab_shopping),
-    CHEM(Icons.Rounded.Science, R.string.tab_chem),
+private object Routes {
+    const val FOOD = "food"
+    const val SHOPPING = "shopping"
+    const val CHEM = "chem"
 }
+
+private data class MainTabSpec(val route: String, val icon: ImageVector, val labelRes: Int)
+
+private val mainTabs = listOf(
+    MainTabSpec(Routes.FOOD, Icons.Rounded.LunchDining, R.string.tab_food),
+    MainTabSpec(Routes.SHOPPING, Icons.Rounded.ShoppingCart, R.string.tab_shopping),
+    MainTabSpec(Routes.CHEM, Icons.Rounded.Science, R.string.tab_chem),
+)
 
 @Composable
 fun RootApp() {
     val container = (LocalContext.current.applicationContext as PisheBlokApp).container
     val authState by container.auth.state.collectAsStateWithLifecycle()
+    val motionOn = rememberMotionEnabled()
 
-    CompositionLocalProvider(LocalAppContainer provides container) {
+    CompositionLocalProvider(
+        LocalAppContainer provides container,
+        LocalMotionEnabled provides motionOn,
+    ) {
         val needsAuth = authState.cloudReady && authState.user == null
+
+        // Спецификации переходов захватываются ДО лямбд: внутри
+        // transitionSpec/AnimatedContent-лямбд вызывать @Composable нельзя.
+        val authFadeIn = if (motionOn) tween<Float>(260) else snap<Float>()
+        val authFadeOut = if (motionOn) tween<Float>(200) else snap<Float>()
+
         AnimatedContent(
             targetState = needsAuth,
-            transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(220)) },
+            transitionSpec = {
+                fadeIn(authFadeIn) togetherWith fadeOut(authFadeOut)
+            },
             label = "root",
         ) { auth ->
             if (auth) {
@@ -123,8 +155,12 @@ fun MainScaffold() {
     val container = LocalAppContainer.current
     val authState by container.auth.state.collectAsStateWithLifecycle()
     val syncStatus by container.sync.status.collectAsStateWithLifecycle()
+    val motionOn = LocalMotionEnabled.current
 
-    var selectedTab by rememberSaveable { mutableIntStateOf(0) }
+    val navController = rememberNavController()
+    val backStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = backStackEntry?.destination?.route
+
     var showLanguageDialog by rememberSaveable { mutableStateOf(false) }
     var showThemeDialog by rememberSaveable { mutableStateOf(false) }
 
@@ -138,7 +174,10 @@ fun MainScaffold() {
         }
     }
 
+    // imePadding: при edge-to-edge окно не ресайзится под клавиатуру,
+    // поэтому поднимаем всё приложение на высоту IME.
     Scaffold(
+        modifier = Modifier.imePadding(),
         topBar = {
             MainTopBar(
                 authState = authState,
@@ -149,16 +188,19 @@ fun MainScaffold() {
             )
         },
         bottomBar = {
-            NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
-                MainTab.entries.forEachIndexed { index, tab ->
-                    NavigationBarItem(
-                        selected = selectedTab == index,
-                        onClick = { selectedTab = index },
-                        icon = { Icon(tab.icon, contentDescription = tab.name) },
-                        label = { Text(stringResource(tab.labelRes)) },
-                    )
-                }
-            }
+            SpringPillNav(
+                tabs = mainTabs.map { PillTab(it.route, stringResource(it.labelRes), it.icon) },
+                selectedRoute = currentRoute,
+                onSelect = { tab ->
+                    if (currentRoute != tab.route) {
+                        navController.navigate(tab.route) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
+                },
+            )
         },
     ) { padding ->
         Column(
@@ -169,18 +211,40 @@ fun MainScaffold() {
             if (!authState.cloudReady) {
                 LocalModeBanner()
             }
-            Box(Modifier.fillMaxSize()) {
-                AnimatedContent(
-                    targetState = selectedTab,
-                    transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(200)) },
-                    label = "tabs",
-                ) { idx ->
-                    when (idx) {
-                        0 -> LocationsScreen(Section.FOOD, stringResource(R.string.food_title))
-                        1 -> ShoppingScreen()
-                        2 -> LocationsScreen(Section.CHEM, stringResource(R.string.chem_title))
-                        else -> {}
-                    }
+
+            // Спецификации переходов: табы сменяются мягким влётом снизу
+            // (пружина 500/0.80) и коротким fade. Захвачены снаружи лямбд.
+            val fade = if (motionOn) tween<Float>(200) else snap<Float>()
+            val slide = if (motionOn) tween<IntOffset>(200) else snap<IntOffset>()
+            val rise = if (motionOn)
+                androidx.compose.animation.core.spring<IntOffset>(dampingRatio = 0.8f, stiffness = 500f)
+            else snap<IntOffset>()
+
+            NavHost(
+                navController = navController,
+                startDestination = Routes.FOOD,
+                modifier = Modifier.fillMaxSize(),
+                enterTransition = {
+                    fadeIn(fade) + slideInVertically(rise) { it / 16 }
+                },
+                exitTransition = {
+                    fadeOut(fade) + slideOutVertically(slide) { -it / 14 }
+                },
+                popEnterTransition = {
+                    fadeIn(fade) + slideInVertically(slide) { -it / 14 }
+                },
+                popExitTransition = {
+                    fadeOut(fade) + slideOutVertically(rise) { it / 16 }
+                },
+            ) {
+                composable(Routes.FOOD) {
+                    LocationsScreen(Section.FOOD, stringResource(R.string.food_title))
+                }
+                composable(Routes.SHOPPING) {
+                    ShoppingScreen()
+                }
+                composable(Routes.CHEM) {
+                    LocationsScreen(Section.CHEM, stringResource(R.string.chem_title))
                 }
             }
         }
@@ -307,18 +371,32 @@ private fun MainTopBar(
 
 @Composable
 private fun LocalModeBanner() {
-    Surface(
-        color = MaterialTheme.colorScheme.tertiaryContainer,
-        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-        modifier = Modifier.fillMaxWidth(),
+    // Баннер влетает на пружине сверху и мягко уходит — не «мигает».
+    val motionOn = LocalMotionEnabled.current
+    val sizeSpec = if (motionOn)
+        androidx.compose.animation.core.spring<IntSize>(dampingRatio = 0.75f, stiffness = 400f)
+    else androidx.compose.animation.core.snap<IntSize>()
+    val fadeSpec = if (motionOn)
+        androidx.compose.animation.core.spring<Float>(dampingRatio = 0.75f, stiffness = 400f)
+    else androidx.compose.animation.core.snap<Float>()
+    androidx.compose.animation.AnimatedVisibility(
+        visible = true,
+        enter = androidx.compose.animation.expandVertically(sizeSpec) +
+            androidx.compose.animation.fadeIn(fadeSpec),
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        Surface(
+            color = MaterialTheme.colorScheme.tertiaryContainer,
+            contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+            modifier = Modifier.fillMaxWidth(),
         ) {
-            Icon(Icons.Rounded.CloudOff, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(10.dp))
-            Text(stringResource(R.string.sync_banner_local), style = MaterialTheme.typography.bodyMedium)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            ) {
+                Icon(Icons.Rounded.CloudOff, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(10.dp))
+                Text(stringResource(R.string.sync_banner_local), style = MaterialTheme.typography.bodyMedium)
+            }
         }
     }
 }

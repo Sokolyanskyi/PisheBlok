@@ -36,6 +36,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -160,7 +161,9 @@ fun AuthScreen(container: AppContainer) {
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                         shape = MaterialTheme.shapes.small,
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("auth_email_field"),
                     )
                     OutlinedTextField(
                         value = password,
@@ -177,7 +180,9 @@ fun AuthScreen(container: AppContainer) {
                             }
                         },
                         shape = MaterialTheme.shapes.small,
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("auth_password_field"),
                     )
                     if (!isLogin) {
                         OutlinedTextField(
@@ -214,7 +219,8 @@ fun AuthScreen(container: AppContainer) {
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(52.dp),
+                            .height(52.dp)
+                            .testTag("auth_login_btn"),
                         shape = MaterialTheme.shapes.medium,
                     ) {
                         if (loading) {

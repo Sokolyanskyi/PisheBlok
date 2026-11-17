@@ -53,12 +53,18 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pisheblok.app.AppContainer
 import com.pisheblok.app.R
 import com.pisheblok.app.data.model.ExpiryState
 import com.pisheblok.app.data.model.ItemCategory
 import com.pisheblok.app.data.model.QuantityUnit
 import com.pisheblok.app.data.model.formatQty
+import com.pisheblok.app.ui.motion.components.ExpiryRing
+import com.pisheblok.app.ui.motion.components.HoldIconButton
+import com.pisheblok.app.ui.motion.components.JellyScale
+import com.pisheblok.app.ui.motion.pressScale
+import com.pisheblok.app.ui.motion.rememberPressSource
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -81,10 +87,9 @@ val ICONS_PLACES = listOf("❄️", "🧊", "🚪", "🗄️", "🧺", "📦", "
 fun parseQty(text: String): Double? =
     text.replace(',', '.').trim().toDoubleOrNull()?.takeIf { it >= 0 }
 
-fun expiryStateOf(expiry: Long?): ExpiryState {
+fun expiryStateOf(expiry: Long?, today: LocalDate = LocalDate.now()): ExpiryState {
     if (expiry == null) return ExpiryState.None
     val zone = ZoneId.systemDefault()
-    val today = LocalDate.now(zone)
     val date = Instant.ofEpochMilli(expiry).atZone(zone).toLocalDate()
     val days = ChronoUnit.DAYS.between(today, date)
     return when {
@@ -158,26 +163,63 @@ fun SmallChip(
 
 @Composable
 fun ExpiryBadge(expiry: Long?, modifier: Modifier = Modifier) {
-    when (val state = expiryStateOf(expiry)) {
+    // Тикающий «сегодня»: смена дня рекомпозирует только бейджи, не списки.
+    val today by ExpiryTicker.today.collectAsStateWithLifecycle()
+    val state = remember(expiry, today) { expiryStateOf(expiry, today) }
+    when (state) {
         is ExpiryState.None -> {}
-        is ExpiryState.Expired -> SmallChip(
-            stringResource(R.string.expired_badge),
-            MaterialTheme.colorScheme.errorContainer,
-            MaterialTheme.colorScheme.onErrorContainer,
-            modifier,
-        )
-        is ExpiryState.Soon -> SmallChip(
-            stringResource(R.string.expires_soon_badge),
-            MaterialTheme.colorScheme.tertiaryContainer,
-            MaterialTheme.colorScheme.onTertiaryContainer,
-            modifier,
-        )
-        is ExpiryState.Ok -> SmallChip(
-            stringResource(R.string.expires_days_fmt, state.daysLeft),
-            MaterialTheme.colorScheme.secondaryContainer,
-            MaterialTheme.colorScheme.onSecondaryContainer,
-            modifier,
-        )
+        is ExpiryState.Expired -> Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = modifier,
+        ) {
+            ExpiryRing(
+                progress = 1f,
+                color = MaterialTheme.colorScheme.error,
+                track = MaterialTheme.colorScheme.error.copy(alpha = 0.25f),
+            )
+            SmallChip(
+                stringResource(R.string.expired_badge),
+                MaterialTheme.colorScheme.errorContainer,
+                MaterialTheme.colorScheme.onErrorContainer,
+            )
+        }
+        is ExpiryState.Soon -> Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = modifier,
+        ) {
+            ExpiryRing(
+                progress = 0.85f,
+                color = MaterialTheme.colorScheme.tertiary,
+                track = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.25f),
+            )
+            SmallChip(
+                stringResource(R.string.expires_soon_badge),
+                MaterialTheme.colorScheme.tertiaryContainer,
+                MaterialTheme.colorScheme.onTertiaryContainer,
+            )
+        }
+        is ExpiryState.Ok -> {
+            // Доля «сгоревшего» 30-дневного окна — кольцо догорает к сроку.
+            val burn = (1f - state.daysLeft.coerceAtMost(30) / 30f).coerceIn(0.15f, 0.8f)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = modifier,
+            ) {
+                ExpiryRing(
+                    progress = burn,
+                    color = MaterialTheme.colorScheme.secondary,
+                    track = MaterialTheme.colorScheme.secondary.copy(alpha = 0.25f),
+                )
+                SmallChip(
+                    stringResource(R.string.expires_days_fmt, state.daysLeft),
+                    MaterialTheme.colorScheme.secondaryContainer,
+                    MaterialTheme.colorScheme.onSecondaryContainer,
+                )
+            }
+        }
     }
 }
 
@@ -194,10 +236,17 @@ fun LocationCard(
     onLongClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val src = rememberPressSource()
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
+            .pressScale(src)
+            .combinedClickable(
+                interactionSource = src,
+                indication = null,
+                onClick = onClick,
+                onLongClick = onLongClick,
+            ),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
     ) {
@@ -242,13 +291,16 @@ fun LocationCard(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AddTile(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val src = rememberPressSource()
     Card(
         modifier = modifier
             .fillMaxWidth()
             .height(132.dp)
-            .clickable(onClick = onClick),
+            .pressScale(src)
+            .clickable(interactionSource = src, indication = null, onClick = onClick),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.0f)
@@ -297,7 +349,6 @@ fun ItemRow(
     modifier: Modifier = Modifier,
     deleted: Boolean = false,
 ) {
-    var confirmDelete by rememberSaveable { mutableStateOf(false) }
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
@@ -306,10 +357,16 @@ fun ItemRow(
             else MaterialTheme.colorScheme.surfaceContainer
         ),
     ) {
+        val rowSrc = rememberPressSource()
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .combinedClickable(onClick = onEdit)
+                .pressScale(rowSrc)
+                .combinedClickable(
+                    interactionSource = rowSrc,
+                    indication = null,
+                    onClick = onEdit,
+                )
                 .padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -378,23 +435,14 @@ fun ItemRow(
                         tint = MaterialTheme.colorScheme.primary,
                     )
                 }
-                IconButton(onClick = { confirmDelete = true }) {
-                    Icon(
-                        Icons.Rounded.Delete,
-                        contentDescription = stringResource(R.string.delete),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                // Удаление — необратимое: hold-to-confirm вместо диалога.
+                HoldIconButton(
+                    icon = Icons.Rounded.Delete,
+                    contentDescription = stringResource(R.string.delete),
+                    onConfirm = onDelete,
+                )
             }
         }
-    }
-    if (confirmDelete) {
-        ConfirmDialog(
-            title = stringResource(R.string.delete_item_confirm, name),
-            message = null,
-            onConfirm = { confirmDelete = false; onDelete() },
-            onDismiss = { confirmDelete = false },
-        )
     }
 }
 
@@ -447,7 +495,7 @@ fun PriorityChips(
     }
 }
 
-/** "How many to buy?" dialog with a quantity field. */
+/** "How many to buy?" dialog with a quantity field + jelly scale. */
 @Composable
 fun QtyDialog(
     title: String,
@@ -462,6 +510,14 @@ fun QtyDialog(
 ) {
     var text by rememberSaveable { mutableStateOf(formatQty(defaultQty)) }
     val parsed = parseQty(text)
+
+    // Пределы желе-шкалы — от единицы измерения.
+    val (scaleMax, scaleStep) = when (unit) {
+        QuantityUnit.PCS, QuantityUnit.PACK, QuantityUnit.BOTTLE, QuantityUnit.BOX -> 12f to 1f
+        QuantityUnit.KG, QuantityUnit.L -> 10f to 0.5f
+        QuantityUnit.G, QuantityUnit.ML -> 2000f to 50f
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
@@ -483,6 +539,14 @@ fun QtyDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("qty_field"),
+                )
+                JellyScale(
+                    value = parsed?.toFloat(),
+                    onValueChange = { text = formatQty(it.toDouble()) },
+                    min = 0f,
+                    max = scaleMax,
+                    step = scaleStep,
+                    modifier = Modifier.padding(top = 8.dp),
                 )
                 Spacer(Modifier.height(10.dp))
                 PriorityChips(urgent = urgent, onUrgentChange = onUrgentChange)

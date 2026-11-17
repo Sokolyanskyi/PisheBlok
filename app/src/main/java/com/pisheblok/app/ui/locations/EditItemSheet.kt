@@ -49,6 +49,7 @@ import com.pisheblok.app.ui.components.DropdownField
 import com.pisheblok.app.ui.components.formatDate
 import com.pisheblok.app.ui.components.label
 import com.pisheblok.app.ui.components.parseQty
+import com.pisheblok.app.ui.motion.components.JellyScale
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZoneOffset
@@ -186,6 +187,20 @@ fun EditItemSheet(
                     modifier = Modifier.weight(1f),
                 )
             }
+            // Желе-шкала под полем количества: поле — источник истины,
+            // шкала синхронизирована в обе стороны.
+            val (qtyMax, qtyStep) = when (unit) {
+                QuantityUnit.PCS, QuantityUnit.PACK, QuantityUnit.BOTTLE, QuantityUnit.BOX -> 12f to 1f
+                QuantityUnit.KG, QuantityUnit.L -> 10f to 0.5f
+                QuantityUnit.G, QuantityUnit.ML -> 2000f to 50f
+            }
+            JellyScale(
+                value = qty?.toFloat(),
+                onValueChange = { qtyText = formatQty(it.toDouble()) },
+                min = 0f,
+                max = qtyMax,
+                step = qtyStep,
+            )
             DropdownField(
                 label = stringResource(R.string.category_label),
                 options = ItemCategory.forSection(section),

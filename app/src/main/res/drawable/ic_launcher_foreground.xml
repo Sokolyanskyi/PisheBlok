@@ -1,23 +1,44 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Foreground адаптивной иконки PisheBlok.
+    Глиф целиком внутри safe-зоны (круг r≈33 от центра 54,54) —
+    на круглых/сквиркл-масках ничего не обрезается.
+    Лист рисуется ДО холодильника и выглядывает из-за верхнего правого угла.
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- fridge body -->
+
+    <!-- свежесть: лист выглядывает из-за холодильника -->
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M41,24 H67 A5,5 0 0 1 72,29 V79 A5,5 0 0 1 67,84 H41 A5,5 0 0 1 36,79 V29 A5,5 0 0 1 41,24 Z" />
-    <!-- divider -->
+        android:fillColor="#FF74A83E"
+        android:pathData="M62,32 C61.5,26.5 65.5,24.5 69.5,26.5 C69,31 66.5,33.5 62,32 Z" />
+
+    <!-- корпус холодильника, кремовый -->
     <path
-        android:fillColor="#8C2C00"
-        android:pathData="M36,45.5 H72 V49.5 H36 Z" />
-    <!-- freezer handle -->
+        android:fillColor="#FFFFF8F2"
+        android:pathData="M46,31 H62 A9,9 0 0 1 71,40 V68 A9,9 0 0 1 62,77 H46 A9,9 0 0 1 37,68 V40 A9,9 0 0 1 46,31 Z" />
+
+    <!-- перегородка морозилки -->
     <path
-        android:fillColor="#8C2C00"
-        android:pathData="M40,31 H46.5 A1.5,1.5 0 0 1 48,32.5 V32.5 A1.5,1.5 0 0 1 46.5,34 H40 Z" />
-    <!-- fridge handle -->
+        android:pathData="M40,49 H68"
+        android:strokeColor="#FFBF3F15"
+        android:strokeWidth="3"
+        android:strokeLineCap="round" />
+
+    <!-- ручка морозилки (горизонтальная) -->
     <path
-        android:fillColor="#8C2C00"
-        android:pathData="M40,53.5 H46.5 A1.5,1.5 0 0 1 48,55 V55 A1.5,1.5 0 0 1 46.5,56.5 H40 Z" />
+        android:pathData="M56,39 H62.5"
+        android:strokeColor="#FFBF3F15"
+        android:strokeWidth="3"
+        android:strokeLineCap="round" />
+
+    <!-- ручка холодильной камеры (вертикальная) -->
+    <path
+        android:pathData="M62.5,55 V68"
+        android:strokeColor="#FFBF3F15"
+        android:strokeWidth="3"
+        android:strokeLineCap="round" />
 </vector>

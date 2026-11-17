@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -71,14 +72,17 @@ fun AddLocationDialog(
             }
         },
         dismissButton = {
-            androidx.compose.foundation.layout.Row {
+            androidx.compose.foundation.layout.Row(
+                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
+            ) {
                 if (onDelete != null) {
-                    TextButton(onClick = onDelete) {
-                        Text(
-                            stringResource(R.string.delete),
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                    }
+                    // Удаление локации необратимо — hold-to-confirm прямо в диалоге.
+                    com.pisheblok.app.ui.motion.components.HoldButton(
+                        label = stringResource(R.string.delete),
+                        onConfirm = onDelete,
+                        height = 40.dp,
+                        modifier = Modifier.width(132.dp),
+                    )
                 }
                 TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
             }

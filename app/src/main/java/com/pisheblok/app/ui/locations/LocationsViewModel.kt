@@ -11,6 +11,7 @@ import com.pisheblok.app.data.model.QuantityUnit
 import com.pisheblok.app.data.model.Section
 import com.pisheblok.app.data.model.ShoppingPriority
 import com.pisheblok.app.data.repo.Repository
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -60,7 +61,14 @@ data class BrowserState(
     val depth: Int = 0,
     val children: List<LocationUi> = emptyList(),
     val itemsHere: List<ItemUi> = emptyList(),
-    val searching: Boolean = false,
+)
+
+/**
+ * Поиск живёт ОТДЕЛЬНО от основного состояния: набор текста пересобирает
+ * только результаты поиска, список локаций/айтемов не рекомпозирует.
+ */
+data class SearchState(
+    val active: Boolean = false,
     val query: String = "",
     val results: List<ItemUi> = emptyList(),
 )
@@ -74,14 +82,21 @@ class LocationsViewModel(
     private val searching = MutableStateFlow(false)
     private val query = MutableStateFlow("")
 
-    val state: StateFlow<BrowserState> = combine(
+    /** Общий источник данных: локации + айтемы секции. */
+    private data class Source(val locs: List<LocationEntity>, val items: List<ItemEntity>)
+
+    private val source: Flow<Source> = combine(
         repo.observeLocations(section),
         repo.observeItemsIncludingDeleted(section),
-        pathIds,
-        combine(searching, query) { s, q -> s to q },
-    ) { locs, items, path, (s, q) ->
-        buildState(locs, items, path, s, q)
+    ) { locs, items -> Source(locs, items) }
+
+    val state: StateFlow<BrowserState> = combine(source, pathIds) { src, path ->
+        buildState(src.locs, src.items, path)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BrowserState())
+
+    val search: StateFlow<SearchState> = combine(source, searching, query) { src, s, q ->
+        buildSearch(src.locs, src.items, s, q)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SearchState())
 
     /** Distinct previously used items for quick-add hints. */
     val suggestions: StateFlow<List<ItemSuggestion>> = repo.observeSuggestions(section)
@@ -201,8 +216,6 @@ class LocationsViewModel(
         locs: List<LocationEntity>,
         items: List<ItemEntity>,
         path: List<String>,
-        searchingOn: Boolean,
-        q: String,
     ): BrowserState {
         val byId = locs.associateBy { it.id }
         val childrenMap = locs.groupBy { it.parentId }
@@ -242,13 +255,6 @@ class LocationsViewModel(
                     .thenBy { it.name }
             )
 
-        val results = if (searchingOn && q.isNotBlank()) {
-            val needle = q.trim().lowercase()
-            items.filter { it.name.lowercase().contains(needle) }
-                .map { it.toUi(byId) }
-                .sortedWith(compareByDescending<ItemUi> { !it.deleted }.thenBy { it.name })
-        } else emptyList()
-
         return BrowserState(
             pathNames = pathLocs.map { it.name },
             currentId = currentId,
@@ -257,10 +263,22 @@ class LocationsViewModel(
             depth = validPath.size,
             children = children,
             itemsHere = itemsHereUi,
-            searching = searchingOn,
-            query = q,
-            results = results,
         )
+    }
+
+    private fun buildSearch(
+        locs: List<LocationEntity>,
+        items: List<ItemEntity>,
+        searchingOn: Boolean,
+        q: String,
+    ): SearchState {
+        val results = if (searchingOn && q.isNotBlank()) {
+            val byId = locs.associateBy { it.id }
+            items.filter { it.name.lowercase().contains(q.trim().lowercase()) }
+                .map { it.toUi(byId) }
+                .sortedWith(compareByDescending<ItemUi> { !it.deleted }.thenBy { it.name })
+        } else emptyList()
+        return SearchState(active = searchingOn, query = q, results = results)
     }
 
     private fun ItemEntity.toUi(byId: Map<String, LocationEntity>): ItemUi {

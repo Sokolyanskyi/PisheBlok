@@ -12,8 +12,9 @@ android {
         applicationId = "com.pisheblok.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 10
-        versionName = "1.1.3"
+        versionCode = 12
+        versionName = "1.2.1"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         resourceConfigurations += listOf("en", "ru", "uk")
     }
 

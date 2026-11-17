@@ -1,6 +1,9 @@
 package com.pisheblok.app.ui.shopping
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,11 +24,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.ShoppingCart
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -39,6 +42,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -46,6 +50,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDecoration
@@ -63,9 +70,17 @@ import com.pisheblok.app.ui.components.LocalAppContainer
 import com.pisheblok.app.ui.components.PriorityChips
 import com.pisheblok.app.ui.components.QtyDialog
 import com.pisheblok.app.ui.components.label
-import com.pisheblok.app.ui.components.ConfirmDialog
 import com.pisheblok.app.ui.components.parseQty
 import com.pisheblok.app.ui.locations.ItemUi
+import com.pisheblok.app.ui.motion.BlokMotion
+import com.pisheblok.app.ui.motion.animatePlacementInColumn
+import com.pisheblok.app.ui.motion.components.CountUpText
+import com.pisheblok.app.ui.motion.components.HoldButton
+import com.pisheblok.app.ui.motion.components.HoldIconButton
+import com.pisheblok.app.ui.motion.components.SpringAccordion
+import com.pisheblok.app.ui.motion.components.SpringCheckbox
+import com.pisheblok.app.ui.motion.motionColorSpring
+import com.pisheblok.app.ui.motion.motionSpring
 import kotlinx.coroutines.launch
 
 @Composable
@@ -78,30 +93,35 @@ fun ShoppingScreen() {
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    var buyForItem by remember { mutableStateOf<ItemUi?>(null) }
-    var buyUrgent by remember { mutableStateOf(true) }
+    // Состояния-холдеры для стабильных лямбд списков.
+    val buyForItem = remember { mutableStateOf<ItemUi?>(null) }
+    val buyUrgent = remember { mutableStateOf(true) }
     var showManualAdd by rememberSaveable { mutableStateOf(false) }
-    var editEntryId by remember { mutableStateOf<String?>(null) }
-    var deleteEntryId by remember { mutableStateOf<String?>(null) }
+    val editEntryId = remember { mutableStateOf<String?>(null) }
 
     val addedMsg = stringResource(R.string.added_to_list)
     val restockMsg = stringResource(R.string.restock_snack)
 
-    val onToggleEntry: (BuyUi, Boolean, String) -> Unit = { entry, checked, restockAction ->
-        vm.setDone(entry.id, checked)
-        if (checked && entry.sourceItemId != null) {
-            scope.launch {
-                val result = snackbar.showSnackbar(
-                    message = restockMsg,
-                    actionLabel = restockAction,
-                    duration = SnackbarDuration.Short,
-                )
-                if (result == SnackbarResult.ActionPerformed) {
-                    vm.restock(entry.id)
+    // Стабильный колбэк: списки не рекомпозируют при каждой рекомпозиции экрана.
+    val onToggleEntry: (BuyUi, Boolean, String) -> Unit = remember(vm, snackbar, scope, restockMsg) {
+        { entry: BuyUi, checked: Boolean, restockAction: String ->
+            vm.setDone(entry.id, checked)
+            if (checked && entry.sourceItemId != null) {
+                scope.launch {
+                    val result = snackbar.showSnackbar(
+                        message = restockMsg,
+                        actionLabel = restockAction,
+                        duration = SnackbarDuration.Short,
+                    )
+                    if (result == SnackbarResult.ActionPerformed) {
+                        vm.restock(entry.id)
+                    }
                 }
             }
         }
     }
+    val onEditEntry: (String) -> Unit = remember { { editEntryId.value = it } }
+    val onDeleteEntry: (String) -> Unit = remember { { vm.deleteEntry(it) } }
 
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
@@ -110,7 +130,7 @@ fun ShoppingScreen() {
             modifier = Modifier.fillMaxSize(),
         ) {
             // ---------- running low ----------
-            item {
+            item(key = "low_header") {
                 Text(
                     stringResource(R.string.section_running_low),
                     style = MaterialTheme.typography.titleMedium,
@@ -118,7 +138,7 @@ fun ShoppingScreen() {
                 )
             }
             if (state.low.isEmpty()) {
-                item {
+                item(key = "low_empty") {
                     EmptyState(
                         emoji = "🧊",
                         title = stringResource(R.string.empty_low_title),
@@ -127,12 +147,12 @@ fun ShoppingScreen() {
                 }
             } else {
                 items(state.low, key = { "low-${it.id}" }) { item ->
-                    LowRow(item = item, onBuy = { buyForItem = item; buyUrgent = true })
+                    LowRow(item = item, onBuy = { buyForItem.value = item; buyUrgent.value = true })
                 }
             }
 
-            // ---------- buy list ----------
-            item {
+            // ---------- buy list: секции на пружинных аккордеонах ----------
+            item(key = "buy_header") {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(top = 8.dp),
@@ -143,14 +163,18 @@ fun ShoppingScreen() {
                         modifier = Modifier.weight(1f),
                     )
                     if (state.hasDone) {
-                        TextButton(onClick = { vm.clearDone() }) {
-                            Text(stringResource(R.string.clear_done))
-                        }
+                        // Очистка выполненных — необратимое: hold-to-confirm.
+                        HoldButton(
+                            label = stringResource(R.string.clear_done),
+                            onConfirm = { vm.clearDone() },
+                            height = 36.dp,
+                            modifier = Modifier.width(160.dp),
+                        )
                     }
                 }
             }
             if (state.urgent.isEmpty() && state.later.isEmpty()) {
-                item {
+                item(key = "buy_empty") {
                     EmptyState(
                         emoji = "🛒",
                         title = stringResource(R.string.empty_buy_title),
@@ -159,30 +183,26 @@ fun ShoppingScreen() {
                 }
             } else {
                 if (state.urgent.isNotEmpty()) {
-                    item {
-                        BuySectionLabel(stringResource(R.string.shopping_urgent), true)
-                    }
-                    items(state.urgent, key = { "buy-${it.id}" }) { entry ->
-                        val restockAction = stringResource(R.string.restock_action, "${formatQty(entry.qty)} ${entry.unit.label()}")
-                        BuyRow(
-                            entry = entry,
-                            onToggle = { checked -> onToggleEntry(entry, checked, restockAction) },
-                            onEdit = { editEntryId = entry.id },
-                            onDelete = { deleteEntryId = entry.id },
+                    item(key = "urgent_section") {
+                        BuySection(
+                            title = stringResource(R.string.shopping_urgent),
+                            urgent = true,
+                            entries = state.urgent,
+                            onToggle = onToggleEntry,
+                            onEdit = onEditEntry,
+                            onDelete = onDeleteEntry,
                         )
                     }
                 }
                 if (state.later.isNotEmpty()) {
-                    item {
-                        BuySectionLabel(stringResource(R.string.shopping_later), false)
-                    }
-                    items(state.later, key = { "buy-${it.id}" }) { entry ->
-                        val restockAction = stringResource(R.string.restock_action, "${formatQty(entry.qty)} ${entry.unit.label()}")
-                        BuyRow(
-                            entry = entry,
-                            onToggle = { checked -> onToggleEntry(entry, checked, restockAction) },
-                            onEdit = { editEntryId = entry.id },
-                            onDelete = { deleteEntryId = entry.id },
+                    item(key = "later_section") {
+                        BuySection(
+                            title = stringResource(R.string.shopping_later),
+                            urgent = false,
+                            entries = state.later,
+                            onToggle = onToggleEntry,
+                            onEdit = onEditEntry,
+                            onDelete = onDeleteEntry,
                         )
                     }
                 }
@@ -201,7 +221,7 @@ fun ShoppingScreen() {
     }
 
     // ---------- dialogs ----------
-    buyForItem?.let { item ->
+    buyForItem.value?.let { item ->
         QtyDialog(
             title = stringResource(R.string.buy_qty_question),
             subtitle = item.name,
@@ -210,12 +230,12 @@ fun ShoppingScreen() {
             confirmText = stringResource(R.string.add_to_list),
             onConfirm = { qty ->
                 scope.launch { snackbar.showSnackbar(addedMsg) }
-                vm.addFromItem(item, qty, buyUrgent)
-                buyForItem = null
+                vm.addFromItem(item, qty, buyUrgent.value)
+                buyForItem.value = null
             },
-            onDismiss = { buyForItem = null },
-            urgent = buyUrgent,
-            onUrgentChange = { buyUrgent = it },
+            onDismiss = { buyForItem.value = null },
+            urgent = buyUrgent.value,
+            onUrgentChange = { buyUrgent.value = it },
         )
     }
     if (showManualAdd) {
@@ -232,7 +252,7 @@ fun ShoppingScreen() {
             onDismiss = { showManualAdd = false },
         )
     }
-    editEntryId?.let { id ->
+    editEntryId.value?.let { id ->
         val entry = state.urgent.firstOrNull { it.id == id } ?: state.later.firstOrNull { it.id == id }
         if (entry != null) {
             EntryDialog(
@@ -243,57 +263,98 @@ fun ShoppingScreen() {
                 initialUrgent = entry.urgent,
                 onConfirm = { name, qty, unit, urgent ->
                     vm.updateEntry(id, name, qty, unit, urgent)
-                    editEntryId = null
+                    editEntryId.value = null
                 },
-                onDismiss = { editEntryId = null },
+                onDismiss = { editEntryId.value = null },
             )
         } else {
-            editEntryId = null
+            editEntryId.value = null
         }
     }
-    deleteEntryId?.let { id ->
-        val entry = state.urgent.firstOrNull { it.id == id } ?: state.later.firstOrNull { it.id == id }
-        if (entry != null) {
-            ConfirmDialog(
-                title = stringResource(R.string.delete_entry_confirm, entry.name),
-                message = null,
-                confirmText = stringResource(R.string.delete),
-                onConfirm = {
-                    vm.deleteEntry(id)
-                    deleteEntryId = null
-                },
-                onDismiss = { deleteEntryId = null },
-            )
-        } else {
-            deleteEntryId = null
+}
+
+/**
+ * Секция «Купить» на пружинном аккордеоне: шапка раскрывает список,
+ * раскрытие едет пружиной высоты. Состояние сохраняется при скролле.
+ */
+@Composable
+private fun BuySection(
+    title: String,
+    urgent: Boolean,
+    entries: List<BuyUi>,
+    onToggle: (BuyUi, Boolean, String) -> Unit,
+    onEdit: (String) -> Unit,
+    onDelete: (String) -> Unit,
+) {
+    var expanded by rememberSaveable { mutableStateOf(true) }
+    val chevronRotation by animateFloatAsState(
+        targetValue = if (expanded) 0f else -90f,
+        animationSpec = motionSpring<Float>(BlokMotion.BOUNCY_DAMPING, BlokMotion.BOUNCY_STIFFNESS),
+        label = "chevron",
+    )
+
+    SpringAccordion(
+        expanded = expanded,
+        header = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { expanded = !expanded }
+                    .padding(vertical = 8.dp),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .padding(end = 8.dp)
+                        .size(10.dp)
+                        .background(
+                            if (urgent) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.secondary,
+                            CircleShape,
+                        ),
+                )
+                Text(
+                    title,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = if (urgent) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                )
+                CountUpText(
+                    value = entries.size,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.width(8.dp))
+                Icon(
+                    Icons.Rounded.KeyboardArrowDown,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.rotate(chevronRotation),
+                )
+            }
+        },
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            entries.forEach { entry ->
+                // key по id: remember-аниматоры принадлежат записи, а не слоту
+                // колонки — переезд айтема при отметке анимируется.
+                key(entry.id) {
+                    val restockAction = stringResource(
+                        R.string.restock_action,
+                        "${formatQty(entry.qty)} ${entry.unit.label()}",
+                    )
+                    BuyRow(
+                        entry = entry,
+                        onToggle = { checked -> onToggle(entry, checked, restockAction) },
+                        onEdit = { onEdit(entry.id) },
+                        onDelete = { onDelete(entry.id) },
+                    )
+                }
+            }
         }
     }
 }
 
 // ---------- rows ----------
-
-@Composable
-private fun BuySectionLabel(text: String, urgent: Boolean) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.padding(top = 4.dp),
-    ) {
-        Box(
-            modifier = Modifier
-                .padding(end = 8.dp)
-                .size(10.dp)
-                .background(
-                    if (urgent) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.secondary,
-                    CircleShape,
-                ),
-        )
-        Text(
-            text,
-            style = MaterialTheme.typography.titleSmall,
-            color = if (urgent) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
 
 @Composable
 private fun LowRow(item: ItemUi, onBuy: () -> Unit) {
@@ -351,23 +412,64 @@ private fun BuyRow(
     onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
+    // Куплено: весь блок темнеет (контейнер к чёрному — работает в обеих
+    // темах), текст приглушается. Цвета едут на цветовой пружине, а не
+    // мгновенно — блок «угасает» плавно.
+    val containerTarget = if (entry.done)
+        lerp(MaterialTheme.colorScheme.surfaceContainer, Color.Black, 0.22f)
+    else MaterialTheme.colorScheme.surfaceContainer
+    val titleTarget = if (entry.done)
+        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.42f)
+    else MaterialTheme.colorScheme.onSurface
+    val secondaryTarget = if (entry.done)
+        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
+    else MaterialTheme.colorScheme.onSurfaceVariant
+    val iconTarget = if (entry.done)
+        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+    else MaterialTheme.colorScheme.onSurfaceVariant
+
+    val containerColor by animateColorAsState(
+        targetValue = containerTarget,
+        animationSpec = motionColorSpring(BlokMotion.SOFT_DAMPING, BlokMotion.SOFT_STIFFNESS),
+        label = "buyRowContainer",
+    )
+    val titleColor by animateColorAsState(
+        targetValue = titleTarget,
+        animationSpec = motionColorSpring(BlokMotion.SOFT_DAMPING, BlokMotion.SOFT_STIFFNESS),
+        label = "buyRowTitle",
+    )
+    val secondaryColor by animateColorAsState(
+        targetValue = secondaryTarget,
+        animationSpec = motionColorSpring(BlokMotion.SOFT_DAMPING, BlokMotion.SOFT_STIFFNESS),
+        label = "buyRowSecondary",
+    )
+    val iconColor by animateColorAsState(
+        targetValue = iconTarget,
+        animationSpec = motionColorSpring(BlokMotion.SOFT_DAMPING, BlokMotion.SOFT_STIFFNESS),
+        label = "buyRowIcons",
+    )
+
     Card(
+        // Плавная пересадка при переупорядочении: выполненный уезжает
+        // в конец секции на пружине.
+        modifier = Modifier
+            .animatePlacementInColumn()
+            .fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(start = 4.dp, top = 6.dp, bottom = 6.dp, end = 6.dp),
         ) {
-            Checkbox(checked = entry.done, onCheckedChange = onToggle)
+            // Пружинный чекбокс: протяжка-заливка, прорисовка галочки, желе-поп.
+            SpringCheckbox(checked = entry.done, onCheckedChange = onToggle)
             Column(Modifier.weight(1f)) {
                 Text(
                     entry.name,
                     style = MaterialTheme.typography.titleMedium,
                     textDecoration = if (entry.done) TextDecoration.LineThrough else null,
-                    color = if (entry.done) MaterialTheme.colorScheme.onSurfaceVariant
-                    else MaterialTheme.colorScheme.onSurface,
+                    color = titleColor,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -376,13 +478,14 @@ private fun BuyRow(
                     Text(
                         "${formatQty(entry.qty)} ${entry.unit.label()}",
                         style = MaterialTheme.typography.bodyMedium,
+                        color = secondaryColor,
                     )
                     entry.linkedLocationPath?.let { path ->
                         Spacer(Modifier.width(8.dp))
                         Text(
                             path,
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = secondaryColor,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -393,16 +496,16 @@ private fun BuyRow(
                 Icon(
                     Icons.Rounded.Edit,
                     contentDescription = stringResource(R.string.edit),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = iconColor,
                 )
             }
-            IconButton(onClick = onDelete) {
-                Icon(
-                    Icons.Rounded.Delete,
-                    contentDescription = stringResource(R.string.delete),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            // Удаление записи — необратимое: hold-to-confirm вместо диалога.
+            HoldIconButton(
+                icon = Icons.Rounded.Delete,
+                contentDescription = stringResource(R.string.delete),
+                onConfirm = onDelete,
+                tint = iconColor,
+            )
         }
     }
 }

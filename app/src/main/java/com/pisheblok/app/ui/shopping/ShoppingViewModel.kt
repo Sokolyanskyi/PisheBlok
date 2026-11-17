@@ -131,8 +131,10 @@ class ShoppingViewModel(
                     .thenBy { it.name }
             )
 
+        // Невыполненные — сверху в порядке добавления (новые вперёд),
+        // выполненные опускаются в конец секции.
         val all = shopping
-            .sortedWith(compareByDescending<ShoppingEntity> { it.done }.thenByDescending { it.createdAt })
+            .sortedWith(compareBy<ShoppingEntity> { it.done }.thenByDescending { it.createdAt })
             .map {
                 BuyUi(
                     id = it.id,
