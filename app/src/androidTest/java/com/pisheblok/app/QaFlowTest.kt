@@ -146,6 +146,8 @@ class QaFlowTest {
         rule.onNodeWithTag("item_name_field", useUnmergedTree = true).performTextInput("QA_Milk")
         rule.onNodeWithTag("item_min_field", useUnmergedTree = true).performTextClearance()
         rule.onNodeWithTag("item_min_field", useUnmergedTree = true).performTextInput("2")
+        // Клавиатура перекрывает кнопку «Сохранить» в нижней части листа.
+        androidx.test.espresso.Espresso.closeSoftKeyboard()
         rule.onNodeWithText("Сохранить", useUnmergedTree = true).performClick()
         // Лист должен закрыться: иначе waitFor совпадёт с полем имени в листе.
         waitForGone("Сохранить")
@@ -155,12 +157,15 @@ class QaFlowTest {
         rule.onNodeWithContentDescription("В список покупок", useUnmergedTree = true).performClick()
         rule.onNodeWithTag("qty_field", useUnmergedTree = true).performTextClearance()
         rule.onNodeWithTag("qty_field", useUnmergedTree = true).performTextInput("3")
+        androidx.test.espresso.Espresso.closeSoftKeyboard()
         rule.onNodeWithText("В список покупок", useUnmergedTree = true).performClick()
 
         rule.onNodeWithContentDescription("Купить", useUnmergedTree = true).performClick()
         waitFor({ count("QA_Milk") })
         rule.waitUntil(15_000) { count("QA_Milk") >= 2 } // low row + buy row
-        rule.onNodeWithText("3 шт", useUnmergedTree = true).assertExists()
+        // «3 шт» может встретиться и в low-строке, и в записи списка
+        // (синхронизация прошлых прогонов) — достаточно наличия.
+        rule.onAllNodesWithText("3 шт", useUnmergedTree = true)[0].assertExists()
 
         // Обратно на «Еду»: удаление товара — hold-to-confirm на строке
         // (при выключенных анимациях срабатывает мгновенно).
@@ -182,6 +187,8 @@ class QaFlowTest {
 
         rule.onNodeWithTag("add_item_fab", useUnmergedTree = true).performClick()
         rule.onNodeWithTag("item_name_field", useUnmergedTree = true).performTextInput("QA_Milk")
+        // Клавиатура перекрывает «Сохранить» — гасим её перед нажатием.
+        androidx.test.espresso.Espresso.closeSoftKeyboard()
         rule.onNodeWithText("Сохранить", useUnmergedTree = true).performClick()
         // Лист должен закрыться до поиска: иначе текст совпадёт с полем листа.
         waitForGone("Сохранить")
