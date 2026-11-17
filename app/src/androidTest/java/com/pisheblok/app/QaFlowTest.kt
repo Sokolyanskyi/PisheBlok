@@ -126,8 +126,9 @@ class QaFlowTest {
         waitFor({ count("Удалить") })
         // Hold-to-confirm вместо диалога. При выключенных анимациях
         // (см. run: settings put global animator_duration_scale 0) hold
-        // срабатывает мгновенно по нажатию.
-        rule.onNodeWithText("Удалить", useUnmergedTree = true).performClick()
+        // срабатывает мгновенно по нажатию. У HoldButton подпись в двух
+        // слоях (базовая + инвертированная под заливкой) — берём первую.
+        rule.onAllNodesWithText("Удалить", useUnmergedTree = true)[0].performClick()
         waitForGone("QA_Kitchen")
     }
 
@@ -146,6 +147,8 @@ class QaFlowTest {
         rule.onNodeWithTag("item_min_field", useUnmergedTree = true).performTextClearance()
         rule.onNodeWithTag("item_min_field", useUnmergedTree = true).performTextInput("2")
         rule.onNodeWithText("Сохранить", useUnmergedTree = true).performClick()
+        // Лист должен закрыться: иначе waitFor совпадёт с полем имени в листе.
+        waitForGone("Сохранить")
         waitFor({ count("QA_Milk") })
 
         // add to the buy list, qty 3, urgent (default)
@@ -180,6 +183,8 @@ class QaFlowTest {
         rule.onNodeWithTag("add_item_fab", useUnmergedTree = true).performClick()
         rule.onNodeWithTag("item_name_field", useUnmergedTree = true).performTextInput("QA_Milk")
         rule.onNodeWithText("Сохранить", useUnmergedTree = true).performClick()
+        // Лист должен закрыться до поиска: иначе текст совпадёт с полем листа.
+        waitForGone("Сохранить")
         waitFor({ count("QA_Milk") })
 
         rule.onNodeWithContentDescription("Поиск", useUnmergedTree = true).performClick()
