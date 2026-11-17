@@ -50,6 +50,7 @@ import com.pisheblok.app.ui.components.formatDate
 import com.pisheblok.app.ui.components.label
 import com.pisheblok.app.ui.components.parseQty
 import com.pisheblok.app.ui.motion.components.JellyScale
+import com.pisheblok.app.ui.theme.Blok
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZoneOffset
@@ -107,8 +108,8 @@ fun EditItemSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(horizontal = Blok.Space.xl),
+            verticalArrangement = Arrangement.spacedBy(Blok.Space.m),
         ) {
             Text(
                 stringResource(if (editing == null) R.string.add_item else R.string.edit_item),
@@ -246,6 +247,10 @@ fun EditItemSheet(
                 onClick = {
                     onSave(name, qty!!, unit, category, expiry, minQty, barcode)
                 },
+                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.tertiary,
+                    contentColor = MaterialTheme.colorScheme.onTertiary,
+                ),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp),

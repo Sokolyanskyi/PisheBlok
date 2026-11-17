@@ -10,10 +10,7 @@
     <string name="edit">Edit</string>
     <string name="add">Add</string>
     <string name="close">Close</string>
-    <string name="search">Search</string>
     <string name="quantity">Quantity</string>
-    <string name="name">Name</string>
-    <string name="today">Today</string>
 
     <!-- Tabs -->
     <string name="tab_food">Food</string>
@@ -23,7 +20,6 @@
     <!-- Titles -->
     <string name="food_title">Food</string>
     <string name="chem_title">Household chemicals</string>
-    <string name="shopping_title">Shopping</string>
 
     <!-- Locations -->
     <string name="add_room">Add room</string>
@@ -32,20 +28,12 @@
     <string name="add_subplace">Add section</string>
     <string name="location_name">Name</string>
     <string name="choose_icon">Icon</string>
-    <string name="delete_location_title">Delete “%1$s”?</string>
-    <string name="delete_location_message">Everything inside (places, items) will be removed too.</string>
-    <string name="type_room">Room</string>
-    <string name="type_floor">Floor</string>
-    <string name="type_place">Storage place</string>
-    <string name="type_section">Section</string>
 
     <!-- Empty states -->
     <string name="empty_rooms_title">No rooms yet</string>
     <string name="empty_rooms_subtitle">Add the first room, e.g. “Kitchen”</string>
     <string name="empty_floors_title">No floors yet</string>
     <string name="empty_floors_subtitle">Add a floor of your home, e.g. “1st floor”</string>
-    <string name="empty_places_title">Nothing inside</string>
-    <string name="empty_places_subtitle">Add a storage place, e.g. “Fridge”</string>
     <string name="empty_items_title">Nothing here yet</string>
     <string name="empty_items_subtitle">Tap “+” to add an item</string>
     <string name="search_hint">Search items…</string>
@@ -55,6 +43,10 @@
 
     <!-- Items -->
     <string name="items_header">Items</string>
+    <string name="summary_expired">Expiring</string>
+    <string name="summary_low">Running low</string>
+    <string name="summary_buy">To buy</string>
+    <string name="summary_all_clear">All clear here</string>
     <string name="sections_header">Sections</string>
     <string name="add_item">Add item</string>
     <string name="edit_item">Edit item</string>
@@ -69,7 +61,6 @@
     <string name="expires_soon_badge">Expires soon</string>
     <string name="expires_days_fmt">%1$d days left</string>
     <string name="low_stock_badge">Running low</string>
-    <string name="delete_item_confirm">Delete “%1$s”?</string>
 
     <!-- Categories: food -->
     <string name="cat_veg">Vegetables &amp; fruits</string>
@@ -120,7 +111,6 @@
     <string name="restock_action">Add %1$s to storage</string>
     <string name="buy_name_label">Item name</string>
     <string name="buy_qty_label">Quantity</string>
-    <string name="delete_entry_confirm">Remove “%1$s” from the list?</string>
 
     <!-- Auth -->
     <string name="auth_welcome">Welcome to PisheBlok</string>
@@ -151,11 +141,6 @@
     <!-- Account & sync -->
     <string name="account_sign_out">Sign out</string>
     <string name="sync_mode_off">Cloud not configured</string>
-    <string name="sync_mode_off_hint">Add Firebase keys in res/values/firebase_config.xml to enable sync</string>
-    <string name="sync_status_syncing">Syncing…</string>
-    <string name="sync_status_ok">Synced</string>
-    <string name="sync_status_offline">Offline — will sync later</string>
-    <string name="sync_status_error">Sync error</string>
     <string name="sync_banner_local">Local mode — data is stored only on this device</string>
 
     <!-- Language -->
@@ -164,7 +149,7 @@
 
     <!-- Theme -->
     <string name="theme_title">Color scheme</string>
-    <string name="scheme_terracotta">Terracotta</string>
+    <string name="scheme_terracotta">Fresh Kitchen</string>
     <string name="scheme_emerald">Emerald</string>
     <string name="scheme_ocean">Ocean</string>
     <string name="scheme_lavander">Lavender</string>

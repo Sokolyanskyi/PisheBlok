@@ -37,7 +37,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -50,6 +49,8 @@ import androidx.compose.ui.unit.sp
 import com.google.firebase.auth.FirebaseAuthException
 import com.pisheblok.app.AppContainer
 import com.pisheblok.app.R
+import com.pisheblok.app.ui.theme.Blok
+import com.pisheblok.app.ui.theme.blokCardShadow
 import kotlinx.coroutines.launch
 
 private enum class AuthMode { LOGIN, REGISTER }
@@ -81,14 +82,7 @@ fun AuthScreen(container: AppContainer) {
     Box(
         Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.22f),
-                        MaterialTheme.colorScheme.background,
-                    )
-                )
-            ),
+            .background(Blok.heroBrush()),
     ) {
         Column(
             modifier = Modifier
@@ -122,13 +116,15 @@ fun AuthScreen(container: AppContainer) {
             Spacer(Modifier.height(28.dp))
 
             Card(
-                shape = MaterialTheme.shapes.extraLarge,
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-                modifier = Modifier.fillMaxWidth(),
+                shape = Blok.hero,
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .blokCardShadow(Blok.hero),
             ) {
                 Column(
-                    modifier = Modifier.padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.padding(Blok.Space.xl),
+                    verticalArrangement = Arrangement.spacedBy(Blok.Space.m),
                 ) {
                     Text(
                         stringResource(if (isLogin) R.string.auth_title_login else R.string.auth_title_register),

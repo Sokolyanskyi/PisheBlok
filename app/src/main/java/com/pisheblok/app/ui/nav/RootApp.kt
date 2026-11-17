@@ -80,6 +80,7 @@ import androidx.compose.ui.unit.sp
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -109,6 +110,13 @@ private object Routes {
 }
 
 private data class MainTabSpec(val route: String, val icon: ImageVector, val labelRes: Int)
+
+/** Переключение на вкладку как через нижнюю навигацию: стек сохраняется. */
+private fun NavController.goToTab(route: String) = navigate(route) {
+    popUpTo(graph.findStartDestination().id) { saveState = true }
+    launchSingleTop = true
+    restoreState = true
+}
 
 private val mainTabs = listOf(
     MainTabSpec(Routes.FOOD, Icons.Rounded.LunchDining, R.string.tab_food),
@@ -238,13 +246,21 @@ fun MainScaffold() {
                 },
             ) {
                 composable(Routes.FOOD) {
-                    LocationsScreen(Section.FOOD, stringResource(R.string.food_title))
+                    LocationsScreen(
+                        section = Section.FOOD,
+                        title = stringResource(R.string.food_title),
+                        onGoShopping = { navController.goToTab(Routes.SHOPPING) },
+                    )
                 }
                 composable(Routes.SHOPPING) {
                     ShoppingScreen()
                 }
                 composable(Routes.CHEM) {
-                    LocationsScreen(Section.CHEM, stringResource(R.string.chem_title))
+                    LocationsScreen(
+                        section = Section.CHEM,
+                        title = stringResource(R.string.chem_title),
+                        onGoShopping = { navController.goToTab(Routes.SHOPPING) },
+                    )
                 }
             }
         }
@@ -295,7 +311,7 @@ private fun MainTopBar(
                 Box(
                     modifier = Modifier
                         .size(30.dp)
-                        .background(MaterialTheme.colorScheme.primary, CircleShape),
+                        .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text("🥘", fontSize = 15.sp)

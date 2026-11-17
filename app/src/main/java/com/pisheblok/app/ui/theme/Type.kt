@@ -35,7 +35,7 @@ val PisheBlokTypography: Typography = run {
         titleLarge = base.titleLarge.copy(
             fontFamily = BlokFontFamily,
             fontWeight = FontWeight.SemiBold,
-            fontSize = 21.sp,
+            fontSize = 22.sp,
         ),
         titleMedium = base.titleMedium.copy(fontFamily = BlokFontFamily, fontWeight = FontWeight.SemiBold),
         bodyLarge = base.bodyLarge.copy(lineHeight = 22.sp),

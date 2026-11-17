@@ -5,12 +5,17 @@ import androidx.lifecycle.viewModelScope
 import com.pisheblok.app.R
 import com.pisheblok.app.data.local.ItemEntity
 import com.pisheblok.app.data.local.LocationEntity
+import com.pisheblok.app.data.local.ShoppingEntity
+import com.pisheblok.app.data.model.ExpiryState
 import com.pisheblok.app.data.model.ItemCategory
 import com.pisheblok.app.data.model.LocationType
 import com.pisheblok.app.data.model.QuantityUnit
 import com.pisheblok.app.data.model.Section
 import com.pisheblok.app.data.model.ShoppingPriority
 import com.pisheblok.app.data.repo.Repository
+import com.pisheblok.app.ui.components.ExpiryTicker
+import com.pisheblok.app.ui.components.SummaryFilter
+import com.pisheblok.app.ui.components.expiryStateOf
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -19,6 +24,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 
 data class LocationUi(
     val id: String,
@@ -73,6 +79,13 @@ data class SearchState(
     val results: List<ItemUi> = emptyList(),
 )
 
+/** Сводка по всей секции: что истекает, что заканчивается, сколько в списке покупок. */
+data class SummaryState(
+    val expired: List<ItemUi> = emptyList(),
+    val low: List<ItemUi> = emptyList(),
+    val toBuy: Int = 0,
+)
+
 class LocationsViewModel(
     private val repo: Repository,
     val section: Section,
@@ -81,6 +94,7 @@ class LocationsViewModel(
     private val pathIds = MutableStateFlow<List<String>>(emptyList())
     private val searching = MutableStateFlow(false)
     private val query = MutableStateFlow("")
+    private val summaryFilter = MutableStateFlow<SummaryFilter?>(null)
 
     /** Общий источник данных: локации + айтемы секции. */
     private data class Source(val locs: List<LocationEntity>, val items: List<ItemEntity>)
@@ -112,23 +126,50 @@ class LocationsViewModel(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    /**
+     * Верхняя сводка секции: истекает / мало / купить. Тикающий
+     * ExpiryTicker «сегодня» пересобирает её в полночь, а не только при
+     * изменениях в базе.
+     */
+    val summary: StateFlow<SummaryState> = combine(
+        source,
+        repo.observeShopping(),
+        ExpiryTicker.today,
+    ) { src, shopping, today ->
+        buildSummary(src.locs, src.items, shopping, today)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SummaryState())
+
+    val activeSummaryFilter: StateFlow<SummaryFilter?> = summaryFilter
+
+    fun toggleSummaryFilter(filter: SummaryFilter) {
+        summaryFilter.value = if (summaryFilter.value == filter) null else filter
+    }
+
+    fun clearSummaryFilter() {
+        summaryFilter.value = null
+    }
+
     // ---------- navigation ----------
 
     fun open(id: String) {
+        summaryFilter.value = null
         pathIds.value = pathIds.value + id
     }
 
     fun back() {
+        summaryFilter.value = null
         if (pathIds.value.isNotEmpty()) {
             pathIds.value = pathIds.value.dropLast(1)
         }
     }
 
     fun backTo(index: Int) {
+        summaryFilter.value = null
         pathIds.value = pathIds.value.take(index)
     }
 
     fun setSearch(active: Boolean, q: String = "") {
+        if (active) summaryFilter.value = null
         searching.value = active
         if (!active) query.value = "" else query.value = q
     }
@@ -279,6 +320,31 @@ class LocationsViewModel(
                 .sortedWith(compareByDescending<ItemUi> { !it.deleted }.thenBy { it.name })
         } else emptyList()
         return SearchState(active = searchingOn, query = q, results = results)
+    }
+
+    private fun buildSummary(
+        locs: List<LocationEntity>,
+        items: List<ItemEntity>,
+        shopping: List<ShoppingEntity>,
+        today: LocalDate,
+    ): SummaryState {
+        val byId = locs.associateBy { it.id }
+        val alive = items.filter { !it.isDeleted }.map { it.toUi(byId) }
+
+        val expired = alive.filter {
+            when (expiryStateOf(it.expiry, today)) {
+                is ExpiryState.Expired, is ExpiryState.Soon -> true
+                else -> false
+            }
+        }.sortedWith(compareBy<ItemUi> { it.expiry ?: Long.MAX_VALUE }.thenBy { it.name })
+
+        val low = alive.filter { it.isLow }
+            .sortedWith(
+                compareBy<ItemUi> { it.expiry ?: Long.MAX_VALUE }.thenBy { it.name }
+            )
+
+        val toBuy = shopping.count { !it.done && !it.isDeleted }
+        return SummaryState(expired = expired, low = low, toBuy = toBuy)
     }
 
     private fun ItemEntity.toUi(byId: Map<String, LocationEntity>): ItemUi {

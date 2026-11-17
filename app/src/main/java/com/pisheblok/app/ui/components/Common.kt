@@ -23,7 +23,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Inventory2
+import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.ShoppingCart
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -48,6 +49,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -65,6 +67,9 @@ import com.pisheblok.app.ui.motion.components.HoldIconButton
 import com.pisheblok.app.ui.motion.components.JellyScale
 import com.pisheblok.app.ui.motion.pressScale
 import com.pisheblok.app.ui.motion.rememberPressSource
+import com.pisheblok.app.ui.theme.Blok
+import com.pisheblok.app.ui.theme.blokCardShadow
+import com.pisheblok.app.ui.theme.blokTabular
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -241,19 +246,20 @@ fun LocationCard(
         modifier = modifier
             .fillMaxWidth()
             .pressScale(src)
+            .blokCardShadow(Blok.card)
             .combinedClickable(
                 interactionSource = src,
                 indication = null,
                 onClick = onClick,
                 onLongClick = onLongClick,
             ),
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        shape = Blok.card,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
+                .padding(Blok.Space.l),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Box(
@@ -301,7 +307,7 @@ fun AddTile(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
             .height(132.dp)
             .pressScale(src)
             .clickable(interactionSource = src, indication = null, onClick = onClick),
-        shape = MaterialTheme.shapes.large,
+        shape = Blok.card,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.0f)
         ),
@@ -350,11 +356,13 @@ fun ItemRow(
     deleted: Boolean = false,
 ) {
     Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
+        modifier = modifier
+            .fillMaxWidth()
+            .blokCardShadow(Blok.cardSmall),
+        shape = Blok.cardSmall,
         colors = CardDefaults.cardColors(
             containerColor = if (deleted) MaterialTheme.colorScheme.surfaceVariant
-            else MaterialTheme.colorScheme.surfaceContainer
+            else MaterialTheme.colorScheme.surfaceContainerLow
         ),
     ) {
         val rowSrc = rememberPressSource()
@@ -403,7 +411,7 @@ fun ItemRow(
                 ) {
                     Text(
                         "${formatQty(qty)} ${unit.label()}",
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = blokTabular(MaterialTheme.typography.bodyMedium),
                         fontWeight = FontWeight.SemiBold,
                     )
                     Text(
@@ -446,30 +454,114 @@ fun ItemRow(
     }
 }
 
-// ---------- Dialogs ----------
+// ---------- Верхняя сводка ----------
+
+/** Фильтр сводки: истекает / мало. «Купить» уводит на вкладку списка. */
+enum class SummaryFilter { EXPIRED, LOW }
+
+/** Полоса стат-чипов над содержимым вкладки: 🔴 истекает · 🟡 мало · 🛒 купить. */
+@Composable
+fun SummaryStrip(
+    expiredCount: Int,
+    lowCount: Int,
+    toBuyCount: Int,
+    selected: SummaryFilter?,
+    onExpired: () -> Unit,
+    onLow: () -> Unit,
+    onToBuy: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(Blok.Space.s),
+    ) {
+        SummaryChip(
+            count = expiredCount,
+            label = stringResource(R.string.summary_expired),
+            icon = Icons.Rounded.Schedule,
+            container = MaterialTheme.colorScheme.errorContainer,
+            onContainer = MaterialTheme.colorScheme.onErrorContainer,
+            selected = selected == SummaryFilter.EXPIRED,
+            onClick = onExpired,
+            modifier = Modifier.weight(1f),
+        )
+        SummaryChip(
+            count = lowCount,
+            label = stringResource(R.string.summary_low),
+            icon = Icons.Rounded.Inventory2,
+            container = MaterialTheme.colorScheme.tertiaryContainer,
+            onContainer = MaterialTheme.colorScheme.onTertiaryContainer,
+            selected = selected == SummaryFilter.LOW,
+            onClick = onLow,
+            modifier = Modifier.weight(1f),
+        )
+        SummaryChip(
+            count = toBuyCount,
+            label = stringResource(R.string.summary_buy),
+            icon = Icons.Rounded.ShoppingCart,
+            container = MaterialTheme.colorScheme.primaryContainer,
+            onContainer = MaterialTheme.colorScheme.onPrimaryContainer,
+            selected = false,
+            onClick = onToBuy,
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
 
 @Composable
-fun ConfirmDialog(
-    title: String,
-    message: String?,
-    confirmText: String = stringResource(R.string.delete),
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
+private fun SummaryChip(
+    count: Int,
+    label: String,
+    icon: ImageVector,
+    container: androidx.compose.ui.graphics.Color,
+    onContainer: androidx.compose.ui.graphics.Color,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = { if (message != null) Text(message) },
-        confirmButton = {
-            TextButton(onClick = onConfirm) {
-                Text(confirmText, color = MaterialTheme.colorScheme.error)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
-        },
-    )
+    val active = count > 0
+    Surface(
+        onClick = onClick,
+        enabled = active || selected,
+        shape = RoundedCornerShape(14.dp),
+        color = if (active || selected) container
+        else MaterialTheme.colorScheme.surfaceContainerLow,
+        contentColor = if (active || selected) onContainer
+        else MaterialTheme.colorScheme.onSurfaceVariant,
+        border = if (selected)
+            androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary)
+        else null,
+        modifier = modifier,
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier
+                .padding(horizontal = Blok.Space.s + 2.dp, vertical = Blok.Space.m)
+                .fillMaxWidth(),
+        ) {
+            Icon(
+                icon,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+            )
+            Text(
+                count.toString(),
+                style = blokTabular(MaterialTheme.typography.titleMedium),
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                label,
+                style = MaterialTheme.typography.labelSmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false),
+            )
+        }
+    }
 }
+
+// ---------- Dialogs ----------
 
 /** Urgent / later selector chips for shopping entries. */
 @Composable
@@ -678,7 +770,3 @@ fun EmptyState(
         )
     }
 }
-
-/** Small edit/delete entry point used by location long-press menus. */
-@Composable
-fun rememberEditIcon(): androidx.compose.ui.graphics.vector.ImageVector = Icons.Rounded.Edit

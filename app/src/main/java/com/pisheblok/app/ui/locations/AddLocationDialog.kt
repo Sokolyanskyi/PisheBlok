@@ -22,6 +22,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.pisheblok.app.R
 import com.pisheblok.app.ui.components.EmojiPicker
+import com.pisheblok.app.ui.theme.Blok
 
 /**
  * Add / rename a room, floor, storage place or section.
@@ -44,7 +45,7 @@ fun AddLocationDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(titleRes)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(Blok.Space.m)) {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },

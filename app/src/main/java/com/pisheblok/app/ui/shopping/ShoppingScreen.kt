@@ -81,6 +81,9 @@ import com.pisheblok.app.ui.motion.components.SpringAccordion
 import com.pisheblok.app.ui.motion.components.SpringCheckbox
 import com.pisheblok.app.ui.motion.motionColorSpring
 import com.pisheblok.app.ui.motion.motionSpring
+import com.pisheblok.app.ui.theme.Blok
+import com.pisheblok.app.ui.theme.blokCardShadow
+import com.pisheblok.app.ui.theme.blokTabular
 import kotlinx.coroutines.launch
 
 @Composable
@@ -125,8 +128,13 @@ fun ShoppingScreen() {
 
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 100.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(
+                start = Blok.Space.l,
+                end = Blok.Space.l,
+                top = Blok.Space.s,
+                bottom = 100.dp,
+            ),
+            verticalArrangement = Arrangement.spacedBy(Blok.Space.s),
             modifier = Modifier.fillMaxSize(),
         ) {
             // ---------- running low ----------
@@ -213,6 +221,8 @@ fun ShoppingScreen() {
             onClick = { showManualAdd = true },
             icon = { Icon(Icons.Rounded.Add, contentDescription = null) },
             text = { Text(stringResource(R.string.add)) },
+            containerColor = MaterialTheme.colorScheme.tertiary,
+            contentColor = MaterialTheme.colorScheme.onTertiary,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(20.dp),
@@ -359,13 +369,15 @@ private fun BuySection(
 @Composable
 private fun LowRow(item: ItemUi, onBuy: () -> Unit) {
     Card(
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-        modifier = Modifier.fillMaxWidth(),
+        shape = Blok.cardSmall,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        modifier = Modifier
+            .fillMaxWidth()
+            .blokCardShadow(Blok.cardSmall),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(start = 16.dp, top = 10.dp, bottom = 10.dp, end = 6.dp),
+            modifier = Modifier.padding(start = Blok.Space.l, top = Blok.Space.s + 2.dp, bottom = Blok.Space.s + 2.dp, end = 6.dp),
         ) {
             Column(Modifier.weight(1f)) {
                 Text(
@@ -381,14 +393,14 @@ private fun LowRow(item: ItemUi, onBuy: () -> Unit) {
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(Blok.Space.xs))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     Text(
                         "${formatQty(item.qty)} ${item.unit.label()}",
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = blokTabular(MaterialTheme.typography.bodyMedium),
                         color = MaterialTheme.colorScheme.primary,
                     )
                     ExpiryBadge(item.expiry)
@@ -416,8 +428,8 @@ private fun BuyRow(
     // темах), текст приглушается. Цвета едут на цветовой пружине, а не
     // мгновенно — блок «угасает» плавно.
     val containerTarget = if (entry.done)
-        lerp(MaterialTheme.colorScheme.surfaceContainer, Color.Black, 0.22f)
-    else MaterialTheme.colorScheme.surfaceContainer
+        lerp(MaterialTheme.colorScheme.surfaceContainerLow, Color.Black, 0.22f)
+    else MaterialTheme.colorScheme.surfaceContainerLow
     val titleTarget = if (entry.done)
         MaterialTheme.colorScheme.onSurface.copy(alpha = 0.42f)
     else MaterialTheme.colorScheme.onSurface
@@ -454,8 +466,9 @@ private fun BuyRow(
         // в конец секции на пружине.
         modifier = Modifier
             .animatePlacementInColumn()
-            .fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
+            .fillMaxWidth()
+            .blokCardShadow(Blok.cardSmall),
+        shape = Blok.cardSmall,
         colors = CardDefaults.cardColors(containerColor = containerColor),
     ) {
         Row(
@@ -477,7 +490,7 @@ private fun BuyRow(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         "${formatQty(entry.qty)} ${entry.unit.label()}",
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = blokTabular(MaterialTheme.typography.bodyMedium),
                         color = secondaryColor,
                     )
                     entry.linkedLocationPath?.let { path ->

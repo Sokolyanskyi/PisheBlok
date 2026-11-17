@@ -64,8 +64,11 @@ import com.pisheblok.app.ui.components.ItemRow
 import com.pisheblok.app.ui.components.LocalAppContainer
 import com.pisheblok.app.ui.components.LocationCard
 import com.pisheblok.app.ui.components.QtyDialog
+import com.pisheblok.app.ui.components.SummaryFilter
+import com.pisheblok.app.ui.components.SummaryStrip
 import com.pisheblok.app.ui.motion.LocalMotionEnabled
 import com.pisheblok.app.ui.motion.staggerIn
+import com.pisheblok.app.ui.theme.Blok
 import kotlinx.coroutines.launch
 
 /**
@@ -78,7 +81,7 @@ import kotlinx.coroutines.launch
  * рекомпозируют при каждом символе поиска.
  */
 @Composable
-fun LocationsScreen(section: Section, title: String) {
+fun LocationsScreen(section: Section, title: String, onGoShopping: () -> Unit = {}) {
     val container = LocalAppContainer.current
     val vm: LocationsViewModel = viewModel(key = section.name) {
         LocationsViewModel(container.repository, section)
@@ -86,6 +89,8 @@ fun LocationsScreen(section: Section, title: String) {
     val state by vm.state.collectAsStateWithLifecycle()
     val search by vm.search.collectAsStateWithLifecycle()
     val suggestions by vm.suggestions.collectAsStateWithLifecycle()
+    val summary by vm.summary.collectAsStateWithLifecycle()
+    val summaryFilter by vm.activeSummaryFilter.collectAsStateWithLifecycle()
     val motionOn = LocalMotionEnabled.current
 
     val snackbar = remember { SnackbarHostState() }
@@ -114,12 +119,23 @@ fun LocationsScreen(section: Section, title: String) {
     val onDeleteSearch: (ItemUi) -> Unit = remember { { if (!it.deleted) vm.deleteItem(it.id) } }
 
     BackHandler(enabled = search.active) { vm.setSearch(false) }
+    // Фильтр сводки перехватывает «назад» раньше уровня drill-down.
+    BackHandler(enabled = !search.active && summaryFilter != null) { vm.clearSummaryFilter() }
     BackHandler(enabled = state.depth > 0 && !search.active) { vm.back() }
+
+    // Выбранный фильтр опустел (товары поправили) — закрываем сами.
+    LaunchedEffect(summaryFilter, summary.expired.size, summary.low.size) {
+        when (summaryFilter) {
+            SummaryFilter.EXPIRED -> if (summary.expired.isEmpty()) vm.clearSummaryFilter()
+            SummaryFilter.LOW -> if (summary.low.isEmpty()) vm.clearSummaryFilter()
+            null -> {}
+        }
+    }
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
             // ---------- header: каскадный влёт статичных секций ----------
-            Column(Modifier.padding(horizontal = 16.dp)) {
+            Column(Modifier.padding(horizontal = Blok.Space.l)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.staggerIn(0),
@@ -211,7 +227,7 @@ fun LocationsScreen(section: Section, title: String) {
             else snap<IntOffset>()
 
             AnimatedContent(
-                targetState = search.active to state.depth,
+                targetState = Triple(search.active, state.depth, summaryFilter != null),
                 transitionSpec = {
                     val entering = targetState.first || targetState.second > initialState.second
                     if (entering) {
@@ -223,10 +239,18 @@ fun LocationsScreen(section: Section, title: String) {
                     }
                 },
                 label = "drilldown",
-            ) { (searching, _) ->
+            ) { (searching, _, filtered) ->
                 if (searching) {
                     SearchResults(
                         search = search,
+                        onBuy = onBuySearch,
+                        onEdit = onEditSearch,
+                        onDelete = onDeleteSearch,
+                    )
+                } else if (filtered) {
+                    SummaryResults(
+                        items = if (summaryFilter == SummaryFilter.EXPIRED)
+                            summary.expired else summary.low,
                         onBuy = onBuySearch,
                         onEdit = onEditSearch,
                         onDelete = onDeleteSearch,
@@ -235,6 +259,11 @@ fun LocationsScreen(section: Section, title: String) {
                     LocationsBody(
                         section = section,
                         state = state,
+                        summary = summary,
+                        summaryFilter = summaryFilter,
+                        onExpired = { vm.toggleSummaryFilter(SummaryFilter.EXPIRED) },
+                        onLow = { vm.toggleSummaryFilter(SummaryFilter.LOW) },
+                        onGoShopping = onGoShopping,
                         onOpen = onOpen,
                         onEditLocation = onEditLocation,
                         onAddLocation = onAddLocation,
@@ -252,6 +281,8 @@ fun LocationsScreen(section: Section, title: String) {
                 onClick = onAddItem,
                 icon = { Icon(Icons.Rounded.Add, contentDescription = null) },
                 text = { Text(stringResource(R.string.add_item)) },
+                containerColor = MaterialTheme.colorScheme.tertiary,
+                contentColor = MaterialTheme.colorScheme.onTertiary,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(20.dp)
@@ -359,8 +390,8 @@ private fun SearchResults(
         )
     } else {
         LazyColumn(
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(horizontal = Blok.Space.l, vertical = Blok.Space.s),
+            verticalArrangement = Arrangement.spacedBy(Blok.Space.s),
             modifier = Modifier.fillMaxSize(),
         ) {
             items(search.results, key = { it.id }) { item ->
@@ -384,10 +415,55 @@ private fun SearchResults(
     }
 }
 
+/** Плоский список товаров выбранного фильтра сводки (по всей секции). */
+@Composable
+private fun SummaryResults(
+    items: List<ItemUi>,
+    onBuy: (ItemUi) -> Unit,
+    onEdit: (ItemUi) -> Unit,
+    onDelete: (ItemUi) -> Unit,
+) {
+    if (items.isEmpty()) {
+        EmptyState(
+            emoji = "✅",
+            title = stringResource(R.string.summary_all_clear),
+            subtitle = "",
+        )
+    } else {
+        LazyColumn(
+            contentPadding = PaddingValues(horizontal = Blok.Space.l, vertical = Blok.Space.s),
+            verticalArrangement = Arrangement.spacedBy(Blok.Space.s),
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            items(items, key = { it.id }) { item ->
+                ItemRow(
+                    name = item.name,
+                    qty = item.qty,
+                    unit = item.unit,
+                    category = item.category,
+                    expiry = item.expiry,
+                    isLow = item.isLow,
+                    locationPath = if (item.locationPath.isBlank())
+                        stringResource(R.string.search_place_removed)
+                    else item.locationPath,
+                    onBuy = { onBuy(item) },
+                    onEdit = { onEdit(item) },
+                    onDelete = { onDelete(item) },
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun LocationsBody(
     section: Section,
     state: BrowserState,
+    summary: SummaryState,
+    summaryFilter: SummaryFilter?,
+    onExpired: () -> Unit,
+    onLow: () -> Unit,
+    onGoShopping: () -> Unit,
     onOpen: (String) -> Unit,
     onEditLocation: (LocationUi) -> Unit,
     onAddLocation: () -> Unit,
@@ -397,10 +473,32 @@ private fun LocationsBody(
     onDelete: (ItemUi) -> Unit,
 ) {
     LazyColumn(
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 100.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        contentPadding = PaddingValues(
+            start = Blok.Space.l,
+            end = Blok.Space.l,
+            top = Blok.Space.s,
+            bottom = 100.dp,
+        ),
+        verticalArrangement = Arrangement.spacedBy(Blok.Space.s + 2.dp),
         modifier = Modifier.fillMaxSize(),
     ) {
+        // Сводка «что требует внимания» — только на корне секции.
+        if (state.depth == 0 &&
+            (summary.expired.isNotEmpty() || summary.low.isNotEmpty() || summary.toBuy > 0)
+        ) {
+            item(key = "summary") {
+                SummaryStrip(
+                    expiredCount = summary.expired.size,
+                    lowCount = summary.low.size,
+                    toBuyCount = summary.toBuy,
+                    selected = summaryFilter,
+                    onExpired = onExpired,
+                    onLow = onLow,
+                    onToBuy = onGoShopping,
+                    modifier = Modifier.padding(bottom = 2.dp),
+                )
+            }
+        }
         if (state.depth == 0 && state.children.isEmpty()) {
             item(key = "empty") {
                 EmptyState(
@@ -423,11 +521,11 @@ private fun LocationsBody(
             if (state.children.isNotEmpty()) {
                 item(key = "children") {
                     Column(
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(Blok.Space.s),
                         modifier = Modifier.animateContentSize(),
                     ) {
                         state.children.chunked(2).forEach { rowCards ->
-                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(Blok.Space.s)) {
                                 rowCards.forEach { loc ->
                                     LocationCard(
                                         icon = loc.icon,
@@ -456,7 +554,7 @@ private fun LocationsBody(
                     Text(
                         stringResource(R.string.items_header),
                         style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(top = 6.dp),
+                        modifier = Modifier.padding(top = Blok.Space.xs),
                     )
                 }
             }

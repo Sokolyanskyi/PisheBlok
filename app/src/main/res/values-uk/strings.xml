@@ -10,10 +10,7 @@
     <string name="edit">Змінити</string>
     <string name="add">Додати</string>
     <string name="close">Закрити</string>
-    <string name="search">Пошук</string>
     <string name="quantity">Кількість</string>
-    <string name="name">Назва</string>
-    <string name="today">Сьогодні</string>
 
     <!-- Tabs -->
     <string name="tab_food">Їжа</string>
@@ -23,7 +20,6 @@
     <!-- Titles -->
     <string name="food_title">Їжа</string>
     <string name="chem_title">Побутова хімія</string>
-    <string name="shopping_title">Покупки</string>
 
     <!-- Locations -->
     <string name="add_room">Додати кімнату</string>
@@ -32,20 +28,12 @@
     <string name="add_subplace">Додати секцію</string>
     <string name="location_name">Назва</string>
     <string name="choose_icon">Іконка</string>
-    <string name="delete_location_title">Видалити «%1$s»?</string>
-    <string name="delete_location_message">Усе всередині (місця, продукти) теж буде видалено.</string>
-    <string name="type_room">Кімната</string>
-    <string name="type_floor">Поверх</string>
-    <string name="type_place">Місце зберігання</string>
-    <string name="type_section">Секція</string>
 
     <!-- Empty states -->
     <string name="empty_rooms_title">Кімнат ще немає</string>
     <string name="empty_rooms_subtitle">Додайте першу кімнату, наприклад «Кухня»</string>
     <string name="empty_floors_title">Поверхів ще немає</string>
     <string name="empty_floors_subtitle">Додайте поверх будинку, наприклад «1-й поверх»</string>
-    <string name="empty_places_title">Всередині порожньо</string>
-    <string name="empty_places_subtitle">Додайте місце зберігання, наприклад «Холодильник»</string>
     <string name="empty_items_title">Тут поки нічого немає</string>
     <string name="empty_items_subtitle">Натисніть «+», щоб додати продукт</string>
     <string name="search_hint">Пошук продуктів…</string>
@@ -55,6 +43,10 @@
 
     <!-- Items -->
     <string name="items_header">Продукти</string>
+    <string name="summary_expired">Истікає</string>
+    <string name="summary_low">Бракує</string>
+    <string name="summary_buy">Купити</string>
+    <string name="summary_all_clear">Тут усе гаразд</string>
     <string name="sections_header">Секції</string>
     <string name="add_item">Додати продукт</string>
     <string name="edit_item">Змінити продукт</string>
@@ -69,7 +61,6 @@
     <string name="expires_soon_badge">Скоро скінчиться</string>
     <string name="expires_days_fmt">Залишилось %1$d дн.</string>
     <string name="low_stock_badge">Закінчується</string>
-    <string name="delete_item_confirm">Видалити «%1$s»?</string>
 
     <!-- Categories: food -->
     <string name="cat_veg">Овочі та фрукти</string>
@@ -120,7 +111,6 @@
     <string name="restock_action">Додати %1$s на склад</string>
     <string name="buy_name_label">Назва</string>
     <string name="buy_qty_label">Кількість</string>
-    <string name="delete_entry_confirm">Прибрати «%1$s» зі списку?</string>
 
     <!-- Auth -->
     <string name="auth_welcome">Вітаємо у ПищеБлоці</string>
@@ -151,11 +141,6 @@
     <!-- Account & sync -->
     <string name="account_sign_out">Вийти</string>
     <string name="sync_mode_off">Хмара не налаштована</string>
-    <string name="sync_mode_off_hint">Додайте ключі Firebase у res/values/firebase_config.xml, щоб увімкнути синхронізацію</string>
-    <string name="sync_status_syncing">Синхронізація…</string>
-    <string name="sync_status_ok">Синхронізовано</string>
-    <string name="sync_status_offline">Немає мережі — синхронізуємо пізніше</string>
-    <string name="sync_status_error">Помилка синхронізації</string>
     <string name="sync_banner_local">Локальний режим — дані лише на цьому пристрої</string>
 
     <!-- Language -->
@@ -164,7 +149,7 @@
 
     <!-- Theme -->
     <string name="theme_title">Колірна схема</string>
-    <string name="scheme_terracotta">Терракота</string>
+    <string name="scheme_terracotta">Свіжа кухня</string>
     <string name="scheme_emerald">Смарагд</string>
     <string name="scheme_ocean">Океан</string>
     <string name="scheme_lavander">Лаванда</string>

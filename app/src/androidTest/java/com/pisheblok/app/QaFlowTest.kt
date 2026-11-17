@@ -114,8 +114,8 @@ class QaFlowTest {
     fun t1_smokeLaunch() {
         waitFor({ count("ПищеБлок") })
         rule.onNodeWithText("ПищеБлок", useUnmergedTree = true).assertExists()
-        rule.onNodeWithContentDescription("SHOPPING", useUnmergedTree = true).assertExists()
-        rule.onNodeWithContentDescription("CHEM", useUnmergedTree = true).assertExists()
+        rule.onNodeWithContentDescription("Купить", useUnmergedTree = true).assertExists()
+        rule.onNodeWithContentDescription("Химия", useUnmergedTree = true).assertExists()
     }
 
     @Test
@@ -123,9 +123,10 @@ class QaFlowTest {
         addRoom("QA_Kitchen")
         rule.onNodeWithText("QA_Kitchen", useUnmergedTree = true).assertExists()
         rule.onNodeWithText("QA_Kitchen", useUnmergedTree = true).performTouchInput { longClick() }
-        waitFor({ count("Изменить") })
-        rule.onNodeWithText("Удалить", useUnmergedTree = true).performClick()
-        waitFor({ count("Удалить «QA_Kitchen»?") })
+        waitFor({ count("Удалить") })
+        // Hold-to-confirm вместо диалога. При выключенных анимациях
+        // (см. run: settings put global animator_duration_scale 0) hold
+        // срабатывает мгновенно по нажатию.
         rule.onNodeWithText("Удалить", useUnmergedTree = true).performClick()
         waitForGone("QA_Kitchen")
     }
@@ -153,15 +154,17 @@ class QaFlowTest {
         rule.onNodeWithTag("qty_field", useUnmergedTree = true).performTextInput("3")
         rule.onNodeWithText("В список покупок", useUnmergedTree = true).performClick()
 
-        rule.onNodeWithContentDescription("SHOPPING", useUnmergedTree = true).performClick()
+        rule.onNodeWithContentDescription("Купить", useUnmergedTree = true).performClick()
         waitFor({ count("QA_Milk") })
         rule.waitUntil(15_000) { count("QA_Milk") >= 2 } // low row + buy row
         rule.onNodeWithText("3 шт", useUnmergedTree = true).assertExists()
 
+        // Обратно на «Еду»: удаление товара — hold-to-confirm на строке
+        // (при выключенных анимациях срабатывает мгновенно).
+        rule.onNodeWithContentDescription("Еда", useUnmergedTree = true).performClick()
+        waitFor({ count("QA_Milk") })
         rule.onNodeWithContentDescription("Удалить", useUnmergedTree = true).performClick()
-        waitFor({ count("Убрать «QA_Milk» из списка?") })
-        rule.onNodeWithText("Удалить", useUnmergedTree = true).performClick()
-        waitForGone("3 шт")
+        waitForGone("QA_Milk")
     }
 
     @Test
@@ -196,7 +199,10 @@ class QaFlowTest {
         rule.onNodeWithContentDescription("Account", useUnmergedTree = true).performClick()
         rule.onNodeWithText("Language", useUnmergedTree = true).performClick()
         rule.onNodeWithText("Русский", useUnmergedTree = true).performClick()
-        rule.onNodeWithText("ОК", useUnmergedTree = true).performClick()
+        // Приложение пока в английской локали — кнопка подтверждения «OK».
+        rule.waitUntil(10_000) { count("ОК") > 0 || count("OK") > 0 }
+        val okText = if (count("ОК") > 0) "ОК" else "OK"
+        rule.onNodeWithText(okText, useUnmergedTree = true).performClick()
         waitFor({ count("Добавить комнату") })
     }
 }

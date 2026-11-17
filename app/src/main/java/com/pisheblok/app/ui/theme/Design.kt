@@ -4,6 +4,8 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
@@ -55,3 +57,15 @@ object Blok {
         if (isSystemInDarkTheme()) MaterialTheme.colorScheme.error.copy(alpha = 0.22f)
         else MaterialTheme.colorScheme.errorContainer
 }
+
+/**
+ * Мягкая тёплая тень карточки: на светлом креме — шалфейный полумрак,
+ * в тёмной теме карточки живут тоном, тень почти выключена.
+ */
+@Composable
+fun Modifier.blokCardShadow(shape: Shape = Blok.card): Modifier = this.shadow(
+    elevation = 2.dp,
+    shape = shape,
+    ambientColor = if (isSystemInDarkTheme()) Color.Transparent else Color(0x1F4C6B48),
+    spotColor = if (isSystemInDarkTheme()) Color.Transparent else Color(0x334C6B48),
+)
