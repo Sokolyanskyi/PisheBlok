@@ -14,6 +14,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -30,7 +31,6 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -59,6 +59,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pisheblok.app.R
 import com.pisheblok.app.data.model.Section
 import com.pisheblok.app.ui.components.AddTile
+import com.pisheblok.app.ui.components.CompactAddButton
 import com.pisheblok.app.ui.components.EmptyState
 import com.pisheblok.app.ui.components.ItemRow
 import com.pisheblok.app.ui.components.LocalAppContainer
@@ -173,10 +174,20 @@ fun LocationsScreen(section: Section, title: String, onGoShopping: () -> Unit = 
                                 else -> state.currentName ?: ""
                             },
                             style = MaterialTheme.typography.headlineSmall,
-                            maxLines = 1,
+                            maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f),
                         )
+                    }
+                    // Добавление товара — в шапке: FAB накрывал кнопки строк.
+                    if (!search.active && state.depth > 0) {
+                        IconButton(onClick = onAddItem) {
+                            Icon(
+                                Icons.Rounded.Add,
+                                contentDescription = stringResource(R.string.add_item),
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
                     }
                     IconButton(onClick = {
                         if (search.active) vm.setSearch(false) else vm.setSearch(true)
@@ -187,7 +198,9 @@ fun LocationsScreen(section: Section, title: String, onGoShopping: () -> Unit = 
                         )
                     }
                 }
-                if (!search.active && state.depth > 0) {
+                // Крошки — только пройденные уровни: текущий уровень уже в H1.
+                if (!search.active && state.pathNames.size > 1) {
+                    val crumbs = state.pathNames.dropLast(1)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -196,24 +209,20 @@ fun LocationsScreen(section: Section, title: String, onGoShopping: () -> Unit = 
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        state.pathNames.forEachIndexed { index, name ->
+                        crumbs.forEachIndexed { index, name ->
                             Text(
                                 text = name,
                                 style = MaterialTheme.typography.labelLarge,
-                                color = if (index == state.pathNames.lastIndex)
-                                    MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier
                                     .padding(vertical = 6.dp)
                                     .clickable { vm.backTo(index) },
                             )
-                            if (index != state.pathNames.lastIndex) {
-                                Text(
-                                    text = "›",
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = MaterialTheme.colorScheme.outline,
-                                )
-                            }
+                            Text(
+                                text = "›",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.outline,
+                            )
                         }
                     }
                 }
@@ -276,17 +285,6 @@ fun LocationsScreen(section: Section, title: String, onGoShopping: () -> Unit = 
             }
         }
 
-        if (state.depth > 0 && !search.active) {
-            ExtendedFloatingActionButton(
-                onClick = onAddItem,
-                icon = { Icon(Icons.Rounded.Add, contentDescription = null) },
-                text = { Text(stringResource(R.string.add_item)) },
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(20.dp)
-                    .testTag("add_item_fab"),
-            )
-        }
         SnackbarHost(
             hostState = snackbar,
             modifier = Modifier.align(Alignment.BottomCenter),
@@ -297,7 +295,7 @@ fun LocationsScreen(section: Section, title: String, onGoShopping: () -> Unit = 
     if (showAddLocation) {
         AddLocationDialog(
             titleRes = LocationsViewModel.addLabelRes(section, state.depth),
-            iconSet = LocationsViewModel.iconSetFor(section, state.depth),
+            iconSet = com.pisheblok.app.ui.components.ICONS_ANIMATED,
             initialName = null,
             initialIcon = null,
             onConfirm = { name, icon ->
@@ -310,7 +308,7 @@ fun LocationsScreen(section: Section, title: String, onGoShopping: () -> Unit = 
     editLocation.value?.let { loc ->
         AddLocationDialog(
             titleRes = R.string.edit,
-            iconSet = LocationsViewModel.iconSetFor(section, state.depth),
+            iconSet = com.pisheblok.app.ui.components.ICONS_ANIMATED,
             initialName = loc.name,
             initialIcon = loc.icon,
             onConfirm = { name, icon ->
@@ -358,12 +356,11 @@ fun LocationsScreen(section: Section, title: String, onGoShopping: () -> Unit = 
         QtyDialog(
             title = stringResource(R.string.buy_qty_question),
             subtitle = item.name,
-            defaultQty = 1.0,
             unit = item.unit,
             confirmText = stringResource(R.string.add_to_list),
-            onConfirm = { qty ->
+            onConfirm = { input ->
                 scope.launch { snackbar.showSnackbar(addedMsg) }
-                vm.addBuy(item, qty, buyUrgent.value)
+                vm.addBuy(item, input.qty, input.note, buyUrgent.value)
                 buyItem.value = null
             },
             onDismiss = { buyItem.value = null },
@@ -470,6 +467,12 @@ private fun LocationsBody(
     onEdit: (ItemUi) -> Unit,
     onDelete: (ItemUi) -> Unit,
 ) {
+    val addLabel = stringResource(LocationsViewModel.addLabelRes(section, state.depth))
+    // Плитка добавления — в сетке, пока на уровне нет товаров; иначе
+    // компактная кнопка у заголовка «Продукты».
+    val addInGrid = !(state.depth >= 2 && state.itemsHere.isNotEmpty())
+    val fontScale = androidx.compose.ui.platform.LocalDensity.current.fontScale
+
     LazyColumn(
         contentPadding = PaddingValues(
             start = Blok.Space.l,
@@ -509,75 +512,103 @@ private fun LocationsBody(
                     ),
                 )
             }
-            item(key = "add") {
-                AddTile(
-                    label = stringResource(LocationsViewModel.addLabelRes(section, state.depth)),
-                    onClick = onAddLocation,
-                )
-            }
-        } else {
-            if (state.children.isNotEmpty()) {
-                item(key = "children") {
+        }
+
+        // Сетка: карточки локаций + плитка добавления последней ячейкой.
+        // Когда на уровне уже есть продукты, плитка уступает место
+        // компактной кнопке в шапке «Продукты».
+        if (state.children.isNotEmpty() || addInGrid) {
+            item(key = "grid") {
+                BoxWithConstraints(Modifier.fillMaxWidth()) {
+                    val gap = Blok.Space.s
+                    // Высота ячейки — от ширины, но не меньше масштабируемого
+                    // минимума: при системном шрифте 1.3× текст не режется.
+                    val cellWidth = (maxWidth - gap) / 2
+                    val cellHeight = maxOf(cellWidth / 0.92f, 150.dp * fontScale)
+                    val total = state.children.size + if (addInGrid) 1 else 0
                     Column(
-                        verticalArrangement = Arrangement.spacedBy(Blok.Space.s),
+                        verticalArrangement = Arrangement.spacedBy(gap),
                         modifier = Modifier.animateContentSize(),
                     ) {
-                        state.children.chunked(2).forEach { rowCards ->
-                            Row(horizontalArrangement = Arrangement.spacedBy(Blok.Space.s)) {
-                                rowCards.forEach { loc ->
-                                    LocationCard(
-                                        icon = loc.icon,
-                                        name = loc.name,
-                                        itemCount = loc.itemCount,
-                                        lowCount = loc.lowCount,
-                                        onClick = { onOpen(loc.id) },
-                                        onLongClick = { onEditLocation(loc) },
-                                        modifier = Modifier.weight(1f),
-                                    )
+                        var rowStart = 0
+                        while (rowStart < total) {
+                            val rowEnd = minOf(rowStart + 2, total)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(gap),
+                            ) {
+                                for (cell in rowStart until rowEnd) {
+                                    if (cell < state.children.size) {
+                                        val loc = state.children[cell]
+                                        LocationCard(
+                                            icon = loc.icon,
+                                            name = loc.name,
+                                            itemCount = loc.itemCount,
+                                            lowCount = loc.lowCount,
+                                            onClick = { onOpen(loc.id) },
+                                            onLongClick = { onEditLocation(loc) },
+                                            modifier = Modifier.weight(1f),
+                                            label = stringResource(
+                                                LocationsViewModel.typeLabelRes(section, state.depth)
+                                            ),
+                                            height = cellHeight,
+                                        )
+                                    } else {
+                                        AddTile(
+                                            label = addLabel,
+                                            onClick = onAddLocation,
+                                            modifier = Modifier.weight(1f),
+                                            height = cellHeight,
+                                        )
+                                    }
                                 }
-                                if (rowCards.size == 1) Spacer(Modifier.weight(1f))
+                                if (rowEnd - rowStart == 1) Spacer(Modifier.weight(1f))
                             }
+                            rowStart = rowEnd
                         }
                     }
                 }
             }
-            item(key = "add") {
-                AddTile(
-                    label = stringResource(LocationsViewModel.addLabelRes(section, state.depth)),
-                    onClick = onAddLocation,
-                )
-            }
-            if (state.depth > 0 && state.itemsHere.isNotEmpty()) {
-                item(key = "items_header") {
+        }
+
+        if (state.depth > 0 && (state.itemsHere.isNotEmpty() || state.children.isEmpty())) {
+            item(key = "items_header") {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(top = Blok.Space.xs),
+                ) {
                     Text(
                         stringResource(R.string.items_header),
                         style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(top = Blok.Space.xs),
+                        modifier = Modifier.weight(1f),
                     )
+                    if (!addInGrid) {
+                        CompactAddButton(label = addLabel, onClick = onAddLocation)
+                    }
                 }
             }
-            items(state.itemsHere, key = { it.id }) { item ->
-                ItemRow(
-                    name = item.name,
-                    qty = item.qty,
-                    unit = item.unit,
-                    category = item.category,
-                    expiry = item.expiry,
-                    isLow = item.isLow,
-                    locationPath = null,
-                    onBuy = { onBuy(item) },
-                    onEdit = { onEdit(item) },
-                    onDelete = { onDelete(item) },
+        }
+        items(state.itemsHere, key = { it.id }) { item ->
+            ItemRow(
+                name = item.name,
+                qty = item.qty,
+                unit = item.unit,
+                category = item.category,
+                expiry = item.expiry,
+                isLow = item.isLow,
+                locationPath = null,
+                onBuy = { onBuy(item) },
+                onEdit = { onEdit(item) },
+                onDelete = { onDelete(item) },
+            )
+        }
+        if (state.depth > 0 && state.children.isEmpty() && state.itemsHere.isEmpty()) {
+            item(key = "empty_items") {
+                EmptyState(
+                    emoji = "📦",
+                    title = stringResource(R.string.empty_items_title),
+                    subtitle = stringResource(R.string.empty_items_subtitle),
                 )
-            }
-            if (state.depth > 0 && state.children.isEmpty() && state.itemsHere.isEmpty()) {
-                item(key = "empty_items") {
-                    EmptyState(
-                        emoji = "📦",
-                        title = stringResource(R.string.empty_items_title),
-                        subtitle = stringResource(R.string.empty_items_subtitle),
-                    )
-                }
             }
         }
     }

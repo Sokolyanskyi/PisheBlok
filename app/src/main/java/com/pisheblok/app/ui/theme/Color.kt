@@ -70,8 +70,10 @@ val SurfaceContainerDark = Color(0xFF23271C)
 val SurfaceContainerHighDark = Color(0xFF2E3226)
 val SurfaceContainerHighestDark = Color(0xFF393D30)
 
-// ---------- Неон-лайм (тёмная): графит + лайм + жёлтый + коралл ----------
-val NeonPrimaryDark = Color(0xFFC8F044)          // лайм-неон (кнопки, CTA)
+// ---------- Неон-лайм (тёмная): почти чёрный фон + графит-карточки + лайм ----------
+// Референс ToyCad: чёрный экран, чуть более светлые нейтральные карточки,
+// яркий лайм CTA. Тон почти нейтральный — только лёгкая тёплая нота.
+val NeonPrimaryDark = Color(0xFFCDF551)          // лайм-неон (кнопки, CTA)
 val NeonOnPrimaryDark = Color(0xFF161C02)        // почти чёрный текст на лайме
 val NeonPrimaryContainerDark = Color(0xFF2F3A0B)
 val NeonOnPrimaryContainerDark = Color(0xFFD6F27F)
@@ -87,22 +89,22 @@ val NeonErrorDark = Color(0xFFFFB4AB)
 val NeonOnErrorDark = Color(0xFF690005)
 val NeonErrorContainerDark = Color(0xFF93000A)
 val NeonOnErrorContainerDark = Color(0xFFFFDAD6)
-val NeonBackgroundDark = Color(0xFF0E0F0A)       // графит с тёплой зелёной ноткой
-val NeonOnBackgroundDark = Color(0xFFEAEADB)
-val NeonSurfaceDark = Color(0xFF0E0F0A)
-val NeonOnSurfaceDark = Color(0xFFEAEADB)
-val NeonSurfaceVariantDark = Color(0xFF2B2C24)
-val NeonOnSurfaceVariantDark = Color(0xFFC6C7B4)
-val NeonOutlineDark = Color(0xFF90917E)
-val NeonOutlineVariantDark = Color(0xFF2F3028)
-val NeonInverseSurfaceDark = Color(0xFFEAEADB)
+val NeonBackgroundDark = Color(0xFF080906)       // почти чёрный экран
+val NeonOnBackgroundDark = Color(0xFFF2F2E6)
+val NeonSurfaceDark = Color(0xFF080906)
+val NeonOnSurfaceDark = Color(0xFFF2F2E6)
+val NeonSurfaceVariantDark = Color(0xFF25261E)
+val NeonOnSurfaceVariantDark = Color(0xFFBFC0AE)
+val NeonOutlineDark = Color(0xFF8F9080)
+val NeonOutlineVariantDark = Color(0xFF2A2B23)
+val NeonInverseSurfaceDark = Color(0xFFF2F2E6)
 val NeonInverseOnSurfaceDark = Color(0xFF2A2B23)
 val NeonScrimDark = Color(0xFF000000)
-val NeonSurfaceContainerLowestDark = Color(0xFF090A06)
-val NeonSurfaceContainerLowDark = Color(0xFF16170F)
-val NeonSurfaceContainerDark = Color(0xFF1B1C14)
-val NeonSurfaceContainerHighDark = Color(0xFF25261D)
-val NeonSurfaceContainerHighestDark = Color(0xFF303129)
+val NeonSurfaceContainerLowestDark = Color(0xFF000000)
+val NeonSurfaceContainerLowDark = Color(0xFF14150F)   // карточки
+val NeonSurfaceContainerDark = Color(0xFF1A1B14)
+val NeonSurfaceContainerHighDark = Color(0xFF23241B)
+val NeonSurfaceContainerHighestDark = Color(0xFF2E2F25)
 
 // ---------- Неон-лайм (светлая): молочный фон + тёмный олив-лайм ----------
 val NeonPrimaryLight = Color(0xFF495D12)
@@ -133,7 +135,7 @@ val NeonInverseSurfaceLight = Color(0xFF2A2B23)
 val NeonInverseOnSurfaceLight = Color(0xFFF1F2E4)
 val NeonScrimLight = Color(0xFF000000)
 val NeonSurfaceContainerLowestLight = Color(0xFFFFFFFF)
-val NeonSurfaceContainerLowLight = Color(0xFFFBFCF4)
-val NeonSurfaceContainerLight = Color(0xFFF4F5EA)
-val NeonSurfaceContainerHighLight = Color(0xFFEFF1E4)
-val NeonSurfaceContainerHighestLight = Color(0xFFE9EBDB)
+val NeonSurfaceContainerLowLight = Color(0xFFFFFFFF)  // карточки — белые на молоке
+val NeonSurfaceContainerLight = Color(0xFFF1F2E6)
+val NeonSurfaceContainerHighLight = Color(0xFFECEEDA)
+val NeonSurfaceContainerHighestLight = Color(0xFFE7E9DB)

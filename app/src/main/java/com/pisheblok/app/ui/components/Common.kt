@@ -1,12 +1,19 @@
 package com.pisheblok.app.ui.components
 
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -15,6 +22,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -22,16 +30,21 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Inventory2
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.ShoppingCart
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -47,12 +60,21 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -63,13 +85,14 @@ import com.pisheblok.app.data.model.ItemCategory
 import com.pisheblok.app.data.model.QuantityUnit
 import com.pisheblok.app.data.model.formatQty
 import com.pisheblok.app.ui.motion.components.ExpiryRing
-import com.pisheblok.app.ui.motion.components.HoldIconButton
 import com.pisheblok.app.ui.motion.components.JellyScale
 import com.pisheblok.app.ui.motion.pressScale
 import com.pisheblok.app.ui.motion.rememberPressSource
 import com.pisheblok.app.ui.theme.Blok
+import com.pisheblok.app.ui.theme.LocalDarkTheme
 import com.pisheblok.app.ui.theme.blokCardShadow
 import com.pisheblok.app.ui.theme.blokTabular
+import com.pisheblok.app.ui.theme.blokTintBrush
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -81,16 +104,27 @@ val LocalAppContainer = androidx.compose.runtime.staticCompositionLocalOf<AppCon
     error("AppContainer not provided")
 }
 
-// ---------- Emoji icon sets for locations ----------
-
-val ICONS_FLOORS = listOf("🏠", "🏢", "🪜", "🛗", "🔑")
-val ICONS_ROOMS = listOf("🍳", "🛋", "🚪", "📦", "🧺", "🌿", "🥶", "🪴", "🧊", "🥫", "🧃", "🏠")
-val ICONS_PLACES = listOf("❄️", "🧊", "🚪", "🗄️", "🧺", "📦", "🥫", "🧴", "🪣", "🧹", "🧼", "🚿", "🪟", "🛁")
+// ---------- Библиотека эмодзи (статичные картинки, без анимаций) ----------
 
 // ---------- Helpers ----------
 
 fun parseQty(text: String): Double? =
     text.replace(',', '.').trim().toDoubleOrNull()?.takeIf { it >= 0 }
+
+/** Разобранное количество для списка покупок: число или текстовая заметка. */
+data class BuyQtyInput(val qty: Double, val note: String?)
+
+/**
+ * Количество для списка покупок — свободный ввод: число («2», «1,5»),
+ * любой текст («пару пачек») или пусто. Число > 0 превращается в [BuyQtyInput.qty],
+ * всё остальное (включая пустую строку) — в [BuyQtyInput.note].
+ */
+fun parseBuyQtyInput(text: String): BuyQtyInput {
+    val trimmed = text.trim()
+    val parsed = parseQty(trimmed)
+    return if (parsed != null && parsed > 0.0) BuyQtyInput(parsed, null)
+    else BuyQtyInput(0.0, trimmed.ifBlank { null })
+}
 
 fun expiryStateOf(expiry: Long?, today: LocalDate = LocalDate.now()): ExpiryState {
     if (expiry == null) return ExpiryState.None
@@ -146,20 +180,21 @@ fun ItemCategory.label(): String = when (this) {
 @Composable
 fun SmallChip(
     text: String,
-    containerColor: androidx.compose.ui.graphics.Color,
-    contentColor: androidx.compose.ui.graphics.Color,
+    containerColor: Color,
+    contentColor: Color,
     modifier: Modifier = Modifier,
 ) {
+    // Пилюля — как бейджи референса («−40%» на тарифной карточке).
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(8.dp),
+        shape = Blok.pill,
         color = containerColor,
         contentColor = contentColor,
     ) {
         Text(
             text = text,
             style = MaterialTheme.typography.labelMedium,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
@@ -228,6 +263,176 @@ fun ExpiryBadge(expiry: Long?, modifier: Modifier = Modifier) {
     }
 }
 
+// ---------- Библиотека эмодзи ----------
+
+/**
+ * Библиотека эмодзи приложения (~118 шт.). Рендерятся готовыми картинками
+ * Twemoji (CC-BY 4.0) из ресурсов — одинаковый плоский вид на всех
+ * устройствах, без анимаций.
+ */
+val EMOJI_LIBRARY: List<String> = listOf(
+    "🍎", "🥖", "🍞", "🥕", "🍅", "🧺", "📦", "🧊", "🍋", "🍇", "🍏", "🥔", "🥬", "🫐",
+    "🍊", "🎃", "🌽", "🥦", "🍌", "🍉",
+    "🧹", "🧽", "🪥", "🧅", "🧄", "🍄", "🔧", "🖌️", "🪒", "🧼", "🥒", "🫑", "🍆", "🥄",
+    "🪝", "🔑", "🧷", "🥁",
+    "🧀", "🍫", "🍩", "🥐", "🍪", "🥜", "🍯", "🍰", "🧁", "🍬", "🍭", "🥞", "🧇", "🍓",
+    "🍒", "🥟", "🍜", "🥯", "🍡",
+    "🥫", "🧃", "🥤", "🪣", "🧯", "♻️", "🥛", "☕", "🍵", "🥣", "🍺", "🥃", "🧉", "🫙",
+    "🧂", "🪙", "🥮",
+    "🫧", "💧", "🍶", "🚿", "🛁", "🧴", "🫗", "🚰", "🌊", "☁️", "🪶", "🎈", "🕊️", "🎐",
+    "🪁", "🏠",
+    "🚽", "🧻", "🔌", "🪛", "🍽", "🔔", "⏰", "🧲", "🪫", "🔋", "📼", "🪞", "🍳", "🚪",
+    "📚", "🥩", "💊", "🛏", "🧸", "🪑", "💻", "📺", "🎮", "🪴", "🪜", "🚗", "🍷",
+    "🥚",
+    "🌭",
+    "🍖",
+    "🎁",
+    "📓",
+    "🖇",
+    "⌨️",
+    "🍟",
+    "🧾",
+    "📋",
+    "📖",
+    "🖊",
+    "🎻",
+    "🌷",
+    "🥀",
+    "🌱",
+    "🌵",
+    "🌾",
+    "🛍",
+    "🍝",
+    "🍣",
+    "🍤",
+    "🍙",
+    "🍹",
+    "🥙",
+    "🥪",
+    "🌮",
+    "🌯",
+    "🥨",
+    "🍿",
+    "🍧",
+    "🍨",
+    "🧋",
+    "🫖",
+    "🐟",
+    "🍱",
+    "🍲",
+    "🍛",
+    "🥡",
+    "🍗",
+    "🍾",
+    "🥂",
+    "🍑",
+    "🥝",
+    "🍍",
+    "🥭",
+    "🌻",
+    "❄️",
+    "fridge",
+)
+
+/** Совместимое имя для вызовов из экранов. */
+val ICONS_ANIMATED: List<String> = EMOJI_LIBRARY
+
+/** Ключ нестандартной иконки «холодильник» (рисунка нет в Unicode). */
+const val FRIDGE_ICON = "fridge"
+
+/** Пустая иконка: место/секция без картинки. */
+const val NO_ICON = ""
+
+/** Группа иконок в пикере: подпись + набор. */
+data class IconGroup(val labelRes: Int, val emojis: List<String>)
+
+/**
+ * Каталог иконок по назначению — вместо одной простыни из ~110 штук.
+ * Наборы ссылаются на [EMOJI_LIBRARY]; «Все» в пикере показывает её целиком.
+ */
+val ICON_GROUPS: List<IconGroup> = listOf(
+    IconGroup(
+        R.string.icon_cat_food,
+        listOf(
+            "🍎", "🍏", "🍋", "🍊", "🍌", "🍉", "🍇", "🍓", "🍒", "🍑", "🥝", "🍍", "🥭",
+            "🥕", "🍅", "🥔", "🥬", "🫐", "🎃", "🌽", "🥦", "🥒", "🫑", "🍆", "🧅", "🧄",
+            "🍄", "🥚", "🥩", "🍗", "🌭", "🍖", "🐟", "🥛", "🧀", "🥐", "🍞", "🥖", "🥯",
+            "🍪", "🍫", "🍩", "🍰", "🧁", "🍬", "🍭", "🥞", "🧇", "🍯", "🥜", "🍿", "🍧",
+            "🍨", "🥟", "🍜", "🍝", "🍣", "🍤", "🍙", "🍱", "🍲", "🍛", "🥡", "🥙", "🥪",
+            "🌮", "🌯", "🥨", "🍟", "🥮", "🍡", "🥫", "🍷", "🍺", "🥃", "🍹", "🍾", "🥂",
+        ),
+    ),
+    IconGroup(
+        R.string.icon_cat_kitchen,
+        listOf(
+            "🍳", "🥄", "🍽", "🧺", "🧊", "☕", "🍵", "🥣", "🧉",
+            "🥤", "🧃", "🍶", "🫖", "🫙", "🧂", "🪙", "🧯", "🪣", "♻️", "🧴", "💧", "🫗",
+            "🚰", "🥁",
+        ),
+    ),
+    IconGroup(
+        R.string.icon_cat_house,
+        listOf(
+            "🧹", "🧽", "🧼", "🪥", "🪒", "🫧", "🧻", "🚿", "🛁", "🚽", "🔌", "🪛", "🔧",
+            "🖌️", "🧲", "🪫", "🔋", "📼", "🔔", "⏰", "📓", "🧾", "📋", "📖", "🖊", "🖇",
+            "⌨️", "📚", "🛍", "🎁", "💊", "🪶", "🎈", "🕊️", "🎐", "🪝", "🔑", "🧷",
+        ),
+    ),
+    IconGroup(
+        R.string.icon_cat_rooms,
+        listOf(
+            "🏠", "🚪", "🪞", "🛏", "🪑", "🪴", "🪜", "🚗", "💻", "📺", "🎮", "🧸", "🎻",
+            "🌷", "🥀", "🌱", "🌵", "🌾", "🌻", "☁️", "🌊", "🪁", "❄️", FRIDGE_ICON,
+        ),
+    ),
+)
+
+/**
+ * Перенос старых статичных эмодзи (до библиотеки) на ближайшие
+ * из библиотеки. Эмодзи, добавленные в библиотеку напрямую (🍳 и др.),
+ * в миграции не нуждаются — они уже входят в набор.
+ */
+val OLD_ICON_MAP: Map<String, String> = mapOf(
+    "❄️" to "🧊", "🥶" to "🧊",
+    "🌿" to "🪴", "🛋" to "🛏", "🪟" to "🚪", "🧵" to "🧷", "🛠" to "🔧", "🖼" to "🪞",
+    "🥡" to "📦", "🗄️" to "📦", "🧰" to "🔧",
+    "🏢" to "🏠", "🏡" to "🏠", "🏬" to "🏠", "🏭" to "🏠", "🏫" to "🏠",
+    "🏥" to "🏠", "🏨" to "🏠", "🏛" to "🏠", "🗼" to "🏠", "⛺" to "🏠",
+    "🛖" to "🏠", "🏰" to "🏠", "🛗" to "🚪",
+)
+
+/**
+ * Эмодзи-картинка из библиотеки (Twemoji-ресурс); при отсутствии ресурса —
+ * системный шрифт. Статичная, без анимаций.
+ */
+@Composable
+private fun EmojiArt(emoji: String, fontSize: TextUnit) {
+    val resId = EMOJI_DRAWABLES[emoji]
+    if (resId != null) {
+        Image(
+            painter = painterResource(resId),
+            contentDescription = null,
+            modifier = Modifier.size(fontSize.value.dp),
+        )
+    } else {
+        Text(emoji, fontSize = fontSize)
+    }
+}
+
+/**
+ * Эмодзи-глиф для карточек: плоская картинка, при желании — на подложке.
+ */
+@Composable
+fun EmojiGlyph(
+    emoji: String,
+    modifier: Modifier = Modifier,
+    fontSize: TextUnit = 64.sp,
+) {
+    Box(modifier, contentAlignment = Alignment.Center) {
+        EmojiArt(emoji, fontSize)
+    }
+}
+
 // ---------- Location card (grid) ----------
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -240,11 +445,21 @@ fun LocationCard(
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     modifier: Modifier = Modifier,
+    label: String = "",
+    height: Dp? = null,
 ) {
     val src = rememberPressSource()
+    val dark = LocalDarkTheme.current
+    // Контраст к фону: тонкая рамка — чтобы сетка читалась в обеих темах.
+    val borderColor = if (dark) MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
+    else MaterialTheme.colorScheme.outlineVariant
+    // Подпись внизу не ложится на иллюстрацию: мягкий скрим слева
+    // и мягкая подложка только под текстовой зоной.
+    val scrimBase = if (dark) MaterialTheme.colorScheme.background
+    else MaterialTheme.colorScheme.surface
     Card(
         modifier = modifier
-            .fillMaxWidth()
+            .then(if (height != null) Modifier.height(height) else Modifier.aspectRatio(0.92f))
             .pressScale(src)
             .blokCardShadow(Blok.card)
             .combinedClickable(
@@ -254,43 +469,90 @@ fun LocationCard(
                 onLongClick = onLongClick,
             ),
         shape = Blok.card,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        border = BorderStroke(1.dp, borderColor),
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(Blok.Space.l),
-            horizontalAlignment = Alignment.CenterHorizontally,
+        // Tutorial-карточка: label сверху, жирный заголовок, мета снизу;
+        // «персонаж»-эмодзи выполняет за правый нижний край, текст — поверх.
+        Box(
+            Modifier
+                .fillMaxSize()
+                .clip(Blok.card)
+                .background(blokTintBrush(), Blok.card)
         ) {
             Box(
-                modifier = Modifier
-                    .size(56.dp)
-                    .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
-                contentAlignment = Alignment.Center,
+                Modifier
+                    .align(Alignment.BottomEnd)
+                    .offset(x = 10.dp, y = 6.dp)
             ) {
-                Text(icon, fontSize = 26.sp)
+                EmojiGlyph(emoji = icon, fontSize = 122.sp)
             }
-            Spacer(Modifier.height(10.dp))
-            Text(
-                text = name,
-                style = MaterialTheme.typography.titleMedium,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+            // Скрим лежит ПОВЕРХ глифа: виньетка из левого нижнего угла.
+            // Мягкие края — без плашки и шва, подпись читается даже на белой
+            // иллюстрации, правый край глифа остаётся чистым.
+            Box(
+                Modifier
+                    .matchParentSize()
+                    .drawBehind {
+                        val scrimCenter = Offset(size.width * 0.10f, size.height * 1.02f)
+                        drawRect(
+                            brush = Brush.radialGradient(
+                                colorStops = arrayOf(
+                                    0.00f to scrimBase.copy(alpha = 0.95f),
+                                    0.45f to scrimBase.copy(alpha = 0.80f),
+                                    0.78f to scrimBase.copy(alpha = 0.30f),
+                                    1.00f to Color.Transparent,
+                                ),
+                                center = scrimCenter,
+                                radius = size.width * 1.02f,
+                            )
+                        )
+                    }
             )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = if (itemCount == 0) stringResource(R.string.items_count_zero)
-                else androidx.compose.ui.res.pluralStringResource(R.plurals.items_count, itemCount, itemCount),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            if (lowCount > 0) {
-                Spacer(Modifier.height(8.dp))
-                SmallChip(
-                    androidx.compose.ui.res.pluralStringResource(R.plurals.low_inside, lowCount, lowCount),
-                    MaterialTheme.colorScheme.errorContainer,
-                    MaterialTheme.colorScheme.onErrorContainer,
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(14.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    if (lowCount > 0) {
+                        Spacer(Modifier.width(Blok.Space.s))
+                        SmallChip(
+                            pluralStringResource(R.plurals.low_inside, lowCount, lowCount),
+                            MaterialTheme.colorScheme.errorContainer,
+                            MaterialTheme.colorScheme.onErrorContainer,
+                        )
+                    }
+                }
+                Spacer(Modifier.height(Blok.Space.xs))
+                Text(
+                    text = name,
+                    style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp),
+                    fontWeight = FontWeight.ExtraBold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.weight(1f))
+                Text(
+                    text = if (itemCount == 0) stringResource(R.string.items_count_zero)
+                    else pluralStringResource(R.plurals.items_count, itemCount, itemCount),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.fillMaxWidth(0.62f),
                 )
             }
         }
@@ -299,12 +561,19 @@ fun LocationCard(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun AddTile(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun AddTile(
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    height: Dp? = null,
+) {
     val src = rememberPressSource()
     Card(
         modifier = modifier
-            .fillMaxWidth()
-            .height(132.dp)
+            .then(
+                if (height != null) Modifier.height(height)
+                else Modifier.aspectRatio(0.92f)
+            )
             .pressScale(src)
             .clickable(interactionSource = src, indication = null, onClick = onClick),
         shape = Blok.card,
@@ -313,11 +582,11 @@ fun AddTile(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
         ),
         border = androidx.compose.foundation.BorderStroke(
             1.5.dp,
-            MaterialTheme.colorScheme.outlineVariant,
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.55f),
         ),
     ) {
         Column(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().padding(Blok.Space.s),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
@@ -332,8 +601,47 @@ fun AddTile(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
                 textAlign = TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
             )
         }
+    }
+}
+
+/**
+ * Компактное добавление вложенной секции: строка у заголовка «Продукты»,
+ * когда большая плитка съедала бы место до первого товара.
+ */
+@Composable
+fun CompactAddButton(
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val src = rememberPressSource()
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier
+            .heightIn(min = 40.dp)
+            .clip(Blok.pill)
+            .pressScale(src)
+            .clickable(interactionSource = src, indication = null, onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+    ) {
+        Icon(
+            Icons.Rounded.Add,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(18.dp),
+        )
+        Spacer(Modifier.width(4.dp))
+        Text(
+            label,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
@@ -379,10 +687,20 @@ fun ItemRow(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f)) {
+                // Мета-строка сверху — как «дата» на карточках референса.
+                Text(
+                    category.label(),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.height(3.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         name,
                         style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false),
@@ -404,51 +722,88 @@ fun ItemRow(
                         )
                     }
                 }
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(3.dp))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     Text(
                         "${formatQty(qty)} ${unit.label()}",
-                        style = blokTabular(MaterialTheme.typography.bodyMedium),
-                        fontWeight = FontWeight.SemiBold,
+                        style = blokTabular(MaterialTheme.typography.titleMedium),
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
                     )
-                    Text(
-                        "· ${category.label()}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                if (locationPath != null) {
-                    Text(
-                        locationPath,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    if (locationPath != null) {
+                        Text(
+                            locationPath,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     ExpiryBadge(expiry)
                 }
             }
             if (!deleted) {
-                IconButton(onClick = onBuy) {
-                    Icon(
-                        Icons.Rounded.ShoppingCart,
-                        contentDescription = stringResource(R.string.add_to_list),
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
+                // Действия строки живут в «…»: корзина в каждой строке весила
+                // больше самого товара и ловила промахи пальцем.
+                Box {
+                    var menuOpen by remember { mutableStateOf(false) }
+                    IconButton(onClick = { menuOpen = true }) {
+                        Icon(
+                            Icons.Rounded.MoreVert,
+                            contentDescription = stringResource(R.string.row_actions),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.add_to_list)) },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Rounded.ShoppingCart,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                )
+                            },
+                            onClick = {
+                                menuOpen = false
+                                onBuy()
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.edit)) },
+                            leadingIcon = { Icon(Icons.Rounded.Edit, contentDescription = null) },
+                            onClick = {
+                                menuOpen = false
+                                onEdit()
+                            },
+                        )
+                        HorizontalDivider()
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    stringResource(R.string.delete),
+                                    color = MaterialTheme.colorScheme.error,
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Rounded.Delete,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.error,
+                                )
+                            },
+                            onClick = {
+                                menuOpen = false
+                                onDelete()
+                            },
+                        )
+                    }
                 }
-                // Удаление — необратимое: hold-to-confirm вместо диалога.
-                HoldIconButton(
-                    icon = Icons.Rounded.Delete,
-                    contentDescription = stringResource(R.string.delete),
-                    onConfirm = onDelete,
-                )
             }
         }
     }
@@ -459,7 +814,12 @@ fun ItemRow(
 /** Фильтр сводки: истекает / мало. «Купить» уводит на вкладку списка. */
 enum class SummaryFilter { EXPIRED, LOW }
 
-/** Полоса стат-чипов над содержимым вкладки: 🔴 истекает · 🟡 мало · 🛒 купить. */
+/**
+ * Карточка-сводка со строками: цветной кружок + подпись + жирный счётчик.
+ * Обычная карточка темы (surfaceContainerLow) — как соседние карточки.
+ * Клик по строке — прежние фильтры; активный фильтр подсвечивается
+ * primaryContainer-фоном строки.
+ */
 @Composable
 fun SummaryStrip(
     expiredCount: Int,
@@ -471,93 +831,119 @@ fun SummaryStrip(
     onToBuy: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(
+    Card(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(Blok.Space.s),
+        shape = Blok.card,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        ),
     ) {
-        SummaryChip(
-            count = expiredCount,
-            label = stringResource(R.string.summary_expired),
-            icon = Icons.Rounded.Schedule,
-            container = MaterialTheme.colorScheme.errorContainer,
-            onContainer = MaterialTheme.colorScheme.onErrorContainer,
-            selected = selected == SummaryFilter.EXPIRED,
-            onClick = onExpired,
-            modifier = Modifier.weight(1f),
-        )
-        SummaryChip(
-            count = lowCount,
-            label = stringResource(R.string.summary_low),
-            icon = Icons.Rounded.Inventory2,
-            container = MaterialTheme.colorScheme.tertiaryContainer,
-            onContainer = MaterialTheme.colorScheme.onTertiaryContainer,
-            selected = selected == SummaryFilter.LOW,
-            onClick = onLow,
-            modifier = Modifier.weight(1f),
-        )
-        SummaryChip(
-            count = toBuyCount,
-            label = stringResource(R.string.summary_buy),
-            icon = Icons.Rounded.ShoppingCart,
-            container = MaterialTheme.colorScheme.primary,
-            onContainer = MaterialTheme.colorScheme.onPrimary,
-            selected = false,
-            onClick = onToBuy,
-            modifier = Modifier.weight(1f),
-        )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(Blok.Space.m),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            SummaryRow(
+                count = expiredCount,
+                label = stringResource(R.string.summary_expired),
+                icon = Icons.Rounded.Schedule,
+                circle = MaterialTheme.colorScheme.error,
+                onCircle = MaterialTheme.colorScheme.onError,
+                selected = selected == SummaryFilter.EXPIRED,
+                onClick = onExpired,
+            )
+            SummaryRow(
+                count = lowCount,
+                label = stringResource(R.string.summary_low),
+                icon = Icons.Rounded.Inventory2,
+                circle = MaterialTheme.colorScheme.tertiary,
+                onCircle = MaterialTheme.colorScheme.onTertiary,
+                selected = selected == SummaryFilter.LOW,
+                onClick = onLow,
+            )
+            SummaryRow(
+                count = toBuyCount,
+                label = stringResource(R.string.summary_buy),
+                icon = Icons.Rounded.ShoppingCart,
+                circle = MaterialTheme.colorScheme.secondary,
+                onCircle = MaterialTheme.colorScheme.onSecondary,
+                selected = false,
+                onClick = onToBuy,
+            )
+        }
     }
 }
 
 @Composable
-private fun SummaryChip(
+private fun SummaryRow(
     count: Int,
     label: String,
     icon: ImageVector,
-    container: androidx.compose.ui.graphics.Color,
-    onContainer: androidx.compose.ui.graphics.Color,
+    circle: Color,
+    onCircle: Color,
     selected: Boolean,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier,
 ) {
     val active = count > 0
-    Surface(
-        onClick = onClick,
-        enabled = active || selected,
-        shape = RoundedCornerShape(14.dp),
-        color = if (active || selected) container
-        else MaterialTheme.colorScheme.surfaceContainerLow,
-        contentColor = if (active || selected) onContainer
-        else MaterialTheme.colorScheme.onSurfaceVariant,
-        border = if (selected)
-            androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary)
-        else null,
-        modifier = modifier,
+    val rowBg = when {
+        selected -> MaterialTheme.colorScheme.primaryContainer
+        active -> MaterialTheme.colorScheme.surfaceContainerHigh
+        else -> Color.Transparent
+    }
+    val labelColor = when {
+        selected -> MaterialTheme.colorScheme.onPrimaryContainer
+        active -> MaterialTheme.colorScheme.onSurface
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(Blok.cardSmall)
+            .background(rowBg)
+            .clickable(enabled = active || selected, onClick = onClick)
+            .padding(horizontal = Blok.Space.m, vertical = 10.dp),
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            modifier = Modifier
-                .padding(horizontal = Blok.Space.s + 2.dp, vertical = Blok.Space.m)
-                .fillMaxWidth(),
+        Box(
+            modifier = Modifier.size(30.dp),
+            contentAlignment = Alignment.Center,
         ) {
-            Icon(
-                icon,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp),
-            )
-            Text(
-                count.toString(),
-                style = blokTabular(MaterialTheme.typography.titleMedium),
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(
-                label,
-                style = MaterialTheme.typography.labelSmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f, fill = false),
-            )
+            Box(
+                modifier = Modifier
+                    .size(26.dp)
+                    .background(
+                        if (active) circle else MaterialTheme.colorScheme.surfaceContainerHighest,
+                        CircleShape,
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    icon,
+                    contentDescription = null,
+                    tint = if (active) onCircle else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(15.dp),
+                )
+            }
         }
+        Spacer(Modifier.width(Blok.Space.m))
+        Text(
+            label,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = labelColor,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false),
+        )
+        Spacer(Modifier.width(Blok.Space.s))
+        Text(
+            count.toString(),
+            style = blokTabular(MaterialTheme.typography.titleLarge),
+            fontWeight = FontWeight.ExtraBold,
+            color = labelColor,
+        )
     }
 }
 
@@ -592,15 +978,16 @@ fun PriorityChips(
 fun QtyDialog(
     title: String,
     subtitle: String,
-    defaultQty: Double,
     unit: QuantityUnit,
     confirmText: String,
-    onConfirm: (Double) -> Unit,
+    onConfirm: (BuyQtyInput) -> Unit,
     onDismiss: () -> Unit,
     urgent: Boolean = true,
     onUrgentChange: (Boolean) -> Unit = {},
 ) {
-    var text by rememberSaveable { mutableStateOf(formatQty(defaultQty)) }
+    // Поле пустое изначально: количество необязательно — можно число,
+    // текст («пару пачек») или оставить пустым.
+    var text by rememberSaveable { mutableStateOf("") }
     val parsed = parseQty(text)
 
     // Пределы желе-шкалы — от единицы измерения.
@@ -624,10 +1011,11 @@ fun QtyDialog(
                 OutlinedTextField(
                     value = text,
                     onValueChange = { text = it },
-                    label = { Text(stringResource(R.string.quantity)) },
-                    suffix = { Text(unit.label()) },
+                    label = { Text(stringResource(R.string.qty_or_note)) },
+                    // Единица показывается только при числовом вводе —
+                    // к текстовой заметке «шт» не клеится.
+                    suffix = { if (parsed != null) Text(unit.label()) },
                     singleLine = true,
-                    isError = parsed == null || parsed == 0.0,
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("qty_field"),
@@ -645,10 +1033,8 @@ fun QtyDialog(
             }
         },
         confirmButton = {
-            TextButton(
-                enabled = parsed != null && parsed!! > 0.0,
-                onClick = { onConfirm(parsed!!); },
-            ) { Text(confirmText) }
+            // Пустое количество разрешено — добавляем и без него.
+            TextButton(onClick = { onConfirm(parseBuyQtyInput(text)) }) { Text(confirmText) }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
@@ -661,29 +1047,85 @@ fun QtyDialog(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun EmojiPicker(
-    options: List<String>,
+    emojis: List<String>,
     selected: String,
     onSelect: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    FlowRow(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        options.forEach { emoji ->
-            val isSelected = emoji == selected
+    // Каталог разбит по назначению: еда, кухня, быт, комнаты + «Все».
+    var groupIndex by rememberSaveable { mutableStateOf(0) }
+    val groups = remember(emojis) {
+        val allowed = emojis.toSet()
+        buildList {
+            add(IconGroup(R.string.icon_cat_all, emojis))
+            ICON_GROUPS.forEach { g ->
+                val part = g.emojis.filter { it in allowed }
+                if (part.isNotEmpty()) add(IconGroup(g.labelRes, part))
+            }
+        }
+    }
+    val shown = groups.getOrNull(groupIndex)?.emojis ?: emojis
+
+    Column(modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            groups.forEachIndexed { index, group ->
+                androidx.compose.material3.FilterChip(
+                    selected = groupIndex == index,
+                    onClick = { groupIndex = index },
+                    label = { Text(stringResource(group.labelRes), maxLines = 1) },
+                )
+            }
+        }
+        Spacer(Modifier.height(10.dp))
+        FlowRow(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 232.dp)
+                .verticalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            // «Без иконки» — первым и всегда: утилитарный выбор важнее набора.
+            val noneSelected = selected.isBlank()
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = if (isSelected) MaterialTheme.colorScheme.primaryContainer
+                color = if (noneSelected) MaterialTheme.colorScheme.primaryContainer
                 else MaterialTheme.colorScheme.surfaceContainerHigh,
-                modifier = Modifier.clickable { onSelect(emoji) },
+                modifier = Modifier.clickable { onSelect(NO_ICON) },
             ) {
-                Text(
-                    emoji,
-                    fontSize = 22.sp,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                )
+                Box(
+                    modifier = Modifier.size(40.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Rounded.Block,
+                        contentDescription = stringResource(R.string.icon_none),
+                        tint = if (noneSelected) MaterialTheme.colorScheme.onPrimaryContainer
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            }
+            shown.forEach { emoji ->
+                val isSelected = emoji == selected
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (isSelected) MaterialTheme.colorScheme.primaryContainer
+                    else MaterialTheme.colorScheme.surfaceContainerHigh,
+                    modifier = Modifier.clickable { onSelect(emoji) },
+                ) {
+                    Box(
+                        modifier = Modifier.size(40.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        EmojiArt(emoji, 24.sp)
+                    }
+                }
             }
         }
     }
@@ -744,18 +1186,12 @@ fun EmptyState(
     modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 40.dp),
+        modifier = modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Box(
-            modifier = Modifier
-                .size(88.dp)
-                .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(emoji, fontSize = 40.sp)
-        }
-        Spacer(Modifier.height(16.dp))
+        // Те же картинки, что на карточках: системный эмодзи ломал единый вид.
+        EmojiGlyph(emoji = emoji, fontSize = 48.sp)
+        Spacer(Modifier.height(12.dp))
         Text(
             title,
             style = MaterialTheme.typography.titleLarge,

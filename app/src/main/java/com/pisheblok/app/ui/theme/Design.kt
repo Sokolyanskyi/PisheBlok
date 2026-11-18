@@ -3,13 +3,13 @@ package com.pisheblok.app.ui.theme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
-import com.pisheblok.app.ui.theme.LocalDarkTheme
 
 /**
  * Дизайн-токены PisheBlok: формы, шкала отступов, градиенты.
@@ -17,10 +17,10 @@ import com.pisheblok.app.ui.theme.LocalDarkTheme
  */
 object Blok {
 
-    /** Формы: крупные радиусы карточек, pill для чипов. */
-    val card: Shape = RoundedCornerShape(24.dp)
-    val cardSmall: Shape = RoundedCornerShape(16.dp)
-    val hero: Shape = RoundedCornerShape(28.dp)
+    /** Формы: крупные радиусы карточек (как в референсе), pill для чипов. */
+    val card: Shape = RoundedCornerShape(28.dp)
+    val cardSmall: Shape = RoundedCornerShape(18.dp)
+    val hero: Shape = RoundedCornerShape(32.dp)
     val pill: Shape = RoundedCornerShape(50)
 
     /** Шкала отступов — вместо разрозненных inline-значений. */
@@ -59,13 +59,54 @@ object Blok {
 }
 
 /**
- * Мягкая тёплая тень карточки: на светлом креме — шалфейный полумрак,
- * в тёмной теме карточки живут тоном, тень почти выключена.
+ * Цвета главного действия. В светлом «Неон-лайм» CTA красится лаймовым
+ * контейнером с тёмным текстом: сам primary в свете — оливковый, и лайм
+ * остаётся только в сводке. Остальные палитры — обычная пара primary.
+ */
+@Immutable
+data class CtaColors(val container: Color, val content: Color)
+
+@Composable
+fun ctaColors(): CtaColors {
+    val scheme = LocalSchemeState.current.value
+    val colors = MaterialTheme.colorScheme
+    return if (scheme == ThemeScheme.NEON && !LocalDarkTheme.current) {
+        CtaColors(colors.primaryContainer, colors.onPrimaryContainer)
+    } else {
+        CtaColors(colors.primary, colors.onPrimary)
+    }
+}
+
+/**
+ * Одинаковая подложка для всех карточек: мягкий оттенок палитры у верхнего
+ * края, ровный containerColor книзу. Без чередования — сетка выглядит
+ * цельно, тема остаётся узнаваемой (лайм в неоне, лаванда в лаванде).
  */
 @Composable
-fun Modifier.blokCardShadow(shape: Shape = Blok.card): Modifier = this.shadow(
-    elevation = 2.dp,
-    shape = shape,
-    ambientColor = if (LocalDarkTheme.current) Color.Transparent else Color(0x1F4C6B48),
-    spotColor = if (LocalDarkTheme.current) Color.Transparent else Color(0x334C6B48),
+fun blokTintBrush(): Brush = Brush.linearGradient(
+    listOf(
+        if (LocalDarkTheme.current) {
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
+        } else {
+            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
+        },
+        MaterialTheme.colorScheme.surfaceContainerLowest,
+    ),
 )
+
+/**
+ * Мягкая тень карточки из primary палитры: на светлом фоне карточка
+ * отрывается от подложки, в тёмной теме тень выключена — читаемость
+ * даёт рамка и светлая заливка.
+ */
+@Composable
+fun Modifier.blokCardShadow(shape: Shape = Blok.card): Modifier {
+    val dark = LocalDarkTheme.current
+    val tint = MaterialTheme.colorScheme.primary
+    return this.shadow(
+        elevation = if (dark) 0.dp else 6.dp,
+        shape = shape,
+        ambientColor = if (dark) Color.Transparent else tint.copy(alpha = 0.20f),
+        spotColor = if (dark) Color.Transparent else tint.copy(alpha = 0.30f),
+    )
+}

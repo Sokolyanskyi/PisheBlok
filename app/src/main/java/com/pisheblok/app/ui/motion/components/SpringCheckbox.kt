@@ -24,7 +24,6 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
@@ -77,14 +76,16 @@ fun SpringCheckbox(
                 squash.snapTo(1f)
                 squash.animateTo(0f, popSpec)
             }
-            fill.animateTo(1f, softSpec)
+            // Заливка и галочка едут ПАРАЛЛЕЛЬНО: последовательная версия
+            // удваивала время и выглядела «залипшей» до прорисовки галочки.
+            launch { fill.animateTo(1f, softSpec) }
             mark.animateTo(1f, markSpec)
         } else {
             launch {
                 squash.snapTo(-0.6f)
                 squash.animateTo(0f, popSpec)
             }
-            mark.animateTo(0f, softSpec)
+            launch { mark.animateTo(0f, softSpec) }
             fill.animateTo(0f, softSpec)
         }
     }
@@ -122,9 +123,11 @@ fun SpringCheckbox(
                     val radius = boxSize.toPx() * 0.28f
                     val f = fill.value
 
-                    // Дорожка: рамка тянется к акцентному цвету.
+                    // Дорожка: рамка остаётся серой — её догоняет и накрывает
+                    // заливка-протяжка (лерп рамки впереди заливки давал
+                    // «ползущий» ореол вокруг ещё не заполненной части).
                     drawRoundRect(
-                        color = lerp(uncheckedBorder, fillColor, f),
+                        color = uncheckedBorder,
                         topLeft = Offset(strokeW / 2f, strokeW / 2f),
                         size = Size(size.width - strokeW, size.height - strokeW),
                         cornerRadius = CornerRadius(radius, radius),

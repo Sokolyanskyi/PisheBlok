@@ -7,10 +7,15 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -25,6 +30,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.dp
+import com.pisheblok.app.data.model.formatQty
 import com.pisheblok.app.ui.motion.BlokMotion
 import com.pisheblok.app.ui.motion.LocalMotionEnabled
 import com.pisheblok.app.ui.motion.motionSpring
@@ -49,6 +55,7 @@ fun JellyScale(
     max: Float,
     step: Float,
     modifier: Modifier = Modifier,
+    endLabels: Boolean = false,
 ) {
     val motionOn = LocalMotionEnabled.current
     val valid = value != null && value.isFinite() && value in min..max
@@ -114,8 +121,9 @@ fun JellyScale(
         } else null
     }
 
+    Column(modifier.fillMaxWidth()) {
     Box(
-        modifier
+        Modifier
             .fillMaxWidth()
             .height(34.dp)
             .onSizeChanged { railW = it.width.toFloat() }
@@ -129,7 +137,6 @@ fun JellyScale(
                 )
             },
     ) {
-        // Дорожка и риски — чистый draw.
         Box(
             Modifier
                 .fillMaxWidth()
@@ -174,5 +181,23 @@ fun JellyScale(
             // Палец-«капля».
             drawCircle(blobColor, radius = 10.dp.toPx(), center = Offset(thumbX, y))
         }
+    }
+    if (endLabels) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                formatQty(min.toDouble()),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                formatQty(max.toDouble()),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
     }
 }

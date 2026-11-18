@@ -28,6 +28,20 @@
     <string name="add_subplace">Додати секцію</string>
     <string name="location_name">Назва</string>
     <string name="choose_icon">Іконка</string>
+    <string name="icon_style">Стиль емодзі</string>
+    <string name="label_room">Кімната</string>
+    <string name="label_floor">Поверх</string>
+    <string name="label_section">Секція</string>
+    <string name="row_actions">Дії</string>
+    <string name="item_more">Додатково</string>
+    <string name="icon_none">Без іконки</string>
+    <string name="icon_cat_all">Усі</string>
+    <string name="icon_cat_food">Їжа</string>
+    <string name="icon_cat_kitchen">Кухня</string>
+    <string name="icon_cat_house">Побут</string>
+    <string name="icon_cat_rooms">Кімнати</string>
+    <string name="label_place">Місце</string>
+    <string name="icon_animated">Анімовані</string>
 
     <!-- Empty states -->
     <string name="empty_rooms_title">Кімнат ще немає</string>
@@ -109,8 +123,10 @@
     <string name="empty_buy_subtitle">Додайте вручну або з «Закінчується»</string>
     <string name="restock_snack">Позначено як куплено</string>
     <string name="restock_action">Додати %1$s на склад</string>
+    <string name="restock_no_qty">Додати на склад</string>
     <string name="buy_name_label">Назва</string>
     <string name="buy_qty_label">Кількість</string>
+    <string name="qty_or_note">Кількість або нотатка</string>
 
     <!-- Auth -->
     <string name="auth_welcome">Вітаємо у ПищеБлоці</string>

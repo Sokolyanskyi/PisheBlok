@@ -28,6 +28,20 @@
     <string name="add_subplace">Add section</string>
     <string name="location_name">Name</string>
     <string name="choose_icon">Icon</string>
+    <string name="icon_style">Emoji style</string>
+    <string name="label_room">Room</string>
+    <string name="label_floor">Floor</string>
+    <string name="label_place">Place</string>
+    <string name="label_section">Section</string>
+    <string name="row_actions">Row actions</string>
+    <string name="item_more">More options</string>
+    <string name="icon_none">No icon</string>
+    <string name="icon_cat_all">All</string>
+    <string name="icon_cat_food">Food</string>
+    <string name="icon_cat_kitchen">Kitchen</string>
+    <string name="icon_cat_house">Household</string>
+    <string name="icon_cat_rooms">Rooms</string>
+    <string name="icon_animated">Animated</string>
 
     <!-- Empty states -->
     <string name="empty_rooms_title">No rooms yet</string>
@@ -109,8 +123,10 @@
     <string name="empty_buy_subtitle">Add items manually or from “Running low”</string>
     <string name="restock_snack">Marked as bought</string>
     <string name="restock_action">Add %1$s to storage</string>
+    <string name="restock_no_qty">Add to storage</string>
     <string name="buy_name_label">Item name</string>
     <string name="buy_qty_label">Quantity</string>
+    <string name="qty_or_note">Quantity or note</string>
 
     <!-- Auth -->
     <string name="auth_welcome">Welcome to PisheBlok</string>

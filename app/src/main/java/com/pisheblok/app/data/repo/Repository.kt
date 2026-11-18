@@ -10,6 +10,8 @@ import com.pisheblok.app.data.model.ItemCategory
 import com.pisheblok.app.data.model.QuantityUnit
 import com.pisheblok.app.data.model.Section
 import com.pisheblok.app.data.model.ShoppingPriority
+import com.pisheblok.app.ui.components.FRIDGE_ICON
+import com.pisheblok.app.ui.components.OLD_ICON_MAP
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -55,9 +57,28 @@ class Repository(
 
     // ---------- Locations ----------
 
+    /**
+     * Перенос старых статичных эмодзи на библиотеку и назначение
+     * холодильной иконки локациям с «холодильником» в имени.
+     * Идемпотентно: уже перенесённые не трогаются.
+     */
+    suspend fun migrateOldEmojiIcons() {
+        val all = allLocationsSnapshot()
+        for (loc in all) {
+            var newIcon = OLD_ICON_MAP[loc.icon] ?: loc.icon
+            val name = loc.name.lowercase()
+            val fridgeLike = listOf("холодильник", "холодильная", "холодильн", "холодил", "холод", "refrig", "fridge")
+                .any { name.contains(it) }
+            if (fridgeLike) newIcon = FRIDGE_ICON
+            if (newIcon == loc.icon) continue
+            updateLocation(loc, loc.name, newIcon, loc.iconStyle)
+        }
+    }
+
     suspend fun addLocation(
         name: String,
         icon: String,
+        iconStyle: Int = 0,
         type: com.pisheblok.app.data.model.LocationType,
         parentId: String?,
         section: Section,
@@ -71,6 +92,7 @@ class Repository(
                 type = type.name,
                 parentId = parentId,
                 icon = icon.ifBlank { "📦" },
+                iconStyle = iconStyle.coerceIn(0, 3),
                 section = section.name,
                 sortOrder = (locationDao.maxSortOrder(parentId) ?: 0) + 1,
                 updatedAt = now,
@@ -81,8 +103,16 @@ class Repository(
         return id
     }
 
-    suspend fun updateLocation(e: LocationEntity, name: String, icon: String) {
-        locationDao.upsert(e.copy(name = name.trim(), icon = icon.ifBlank { e.icon }, updatedAt = System.currentTimeMillis(), dirty = true))
+    suspend fun updateLocation(e: LocationEntity, name: String, icon: String, iconStyle: Int = e.iconStyle) {
+        locationDao.upsert(
+            e.copy(
+                name = name.trim(),
+                icon = icon.ifBlank { e.icon },
+                iconStyle = iconStyle.coerceIn(0, 3),
+                updatedAt = System.currentTimeMillis(),
+                dirty = true,
+            )
+        )
         notifyDataChanged()
     }
 
@@ -198,16 +228,26 @@ class Repository(
 
     // ---------- Shopping ----------
 
-    suspend fun addShopping(name: String, qty: Double, unit: QuantityUnit, priority: ShoppingPriority, sourceItemId: String?) {
+    suspend fun addShopping(
+        name: String,
+        qty: Double,
+        qtyNote: String?,
+        unit: QuantityUnit,
+        priority: ShoppingPriority,
+        sourceItemId: String?,
+    ) {
         val now = System.currentTimeMillis()
         shoppingDao.upsert(
             ShoppingEntity(
                 id = UUID.randomUUID().toString(),
                 name = name.trim(),
                 qty = qty,
+                qtyNote = qtyNote?.trim()?.ifBlank { null },
                 unit = unit.id,
                 done = false,
                 priority = priority.name,
+                // Новые записи — в верх списка (меньше = выше).
+                sortOrder = (shoppingDao.minSortOrder() ?: 0L) - 1L,
                 sourceItemId = sourceItemId,
                 createdAt = now,
                 updatedAt = now,
@@ -217,17 +257,64 @@ class Repository(
         notifyDataChanged()
     }
 
-    suspend fun updateShopping(e: ShoppingEntity, name: String, qty: Double, unit: QuantityUnit, priority: ShoppingPriority) {
+    suspend fun updateShopping(
+        e: ShoppingEntity,
+        name: String,
+        qty: Double,
+        qtyNote: String?,
+        unit: QuantityUnit,
+        priority: ShoppingPriority,
+    ) {
         shoppingDao.upsert(
             e.copy(
                 name = name.trim(),
                 qty = qty,
+                qtyNote = qtyNote?.trim()?.ifBlank { null },
                 unit = unit.id,
                 priority = priority.name,
                 updatedAt = System.currentTimeMillis(),
                 dirty = true,
             )
         )
+        notifyDataChanged()
+    }
+
+    /**
+     * Перенос записи drag&drop: в другую секцию и/или на позицию
+     * перед [beforeId] (null — в конец секции). Секция-приёмник
+     * перенумеровывается сплошными sortOrder в порядке отображения.
+     */
+    suspend fun moveShopping(id: String, priority: ShoppingPriority, beforeId: String?) {
+        val e = shoppingDao.byId(id) ?: return
+        val all = shoppingDao.observeAll().first()
+        val now = System.currentTimeMillis()
+
+        // Порядок отображения секции-приёмника: купленное тонет в конец,
+        // внутри группы — по ручному sortOrder, новые вперёд.
+        val section = all
+            .filter { it.priority == priority.name }
+            .sortedWith(compareBy<ShoppingEntity> { it.done }.thenBy { it.sortOrder }.thenByDescending { it.createdAt })
+            .toMutableList()
+        section.removeAll { it.id == id }
+
+        val insertAt = beforeId?.let { b -> section.indexOfFirst { it.id == b } }?.takeIf { it >= 0 }
+            ?: section.size
+        section.add(insertAt, e.copy(priority = priority.name))
+
+        // База ниже всех существующих значений: новые записи (min - 1)
+        // остаются сверху после перенумерации.
+        val base = (all.minOfOrNull { it.sortOrder } ?: 0L) - section.size - 1L
+        section.forEachIndexed { index, row ->
+            val moved = row.id == id
+            shoppingDao.upsert(
+                row.copy(
+                    priority = if (moved) priority.name else row.priority,
+                    sortOrder = base + index,
+                    updatedAt = now,
+                    dirty = true,
+                )
+            )
+        }
         notifyDataChanged()
     }
 

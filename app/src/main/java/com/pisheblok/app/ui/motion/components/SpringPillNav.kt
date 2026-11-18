@@ -11,7 +11,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -40,6 +42,7 @@ import com.pisheblok.app.ui.motion.motionColorSpring
 import com.pisheblok.app.ui.motion.motionSpring
 import com.pisheblok.app.ui.motion.pressScale
 import com.pisheblok.app.ui.motion.rememberPressSource
+import com.pisheblok.app.ui.theme.ctaColors
 
 /** Вкладка нижней навигации. */
 data class PillTab(
@@ -52,11 +55,11 @@ private val PILL_SIZE = 44.dp
 private val PILL_RADIUS = 14.dp
 
 /**
- * Нижняя навигация с квадратным индикатором (порт Tab Pill из кита):
- * скруглённый квадрат едет за иконкой выбранной вкладки на жёсткой
- * пружине (620/40), иконка отскакивает при выборе. Иконки и подписи
- * центрированы по вертикали. Геометрия не пересчитывается на кадр:
- * индикатор рисуется в draw-фазе по одному Animatable-отклику.
+ * Плавающая пилюля-навигация (как нижний бар референса): скруглённый
+ * контейнер на отступе от краёв, лаймовый индикатор едет за иконкой
+ * выбранной вкладки на жёсткой пружине (620/40), иконка отскакивает
+ * при выборе. Геометрия не пересчитывается на кадр: индикатор рисуется
+ * в draw-фазе по одному Animatable-отклику.
  */
 @Composable
 fun SpringPillNav(
@@ -70,11 +73,20 @@ fun SpringPillNav(
     val density = LocalDensity.current
     val pillPx = remember(density) { with(density) { PILL_SIZE.toPx() } }
 
-    Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
+    Surface(
+        // Тёмная: графит-пилюля на чёрном; светлая: белая пилюля на молоке.
+        color = if (com.pisheblok.app.ui.theme.LocalDarkTheme.current)
+            MaterialTheme.colorScheme.surfaceContainer
+        else MaterialTheme.colorScheme.surfaceContainerLowest,
+        shape = RoundedCornerShape(32.dp),
+        shadowElevation = 12.dp,
+        modifier = modifier
+            .navigationBarsPadding()
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+    ) {
         Box(
-            modifier
+            Modifier
                 .fillMaxWidth()
-                .navigationBarsPadding()
                 .height(64.dp)
                 // Ширина бара нужна для расчёта клетки вкладки — без неё
                 // индикатор не нарисуется вовсе.
@@ -86,7 +98,7 @@ fun SpringPillNav(
             // Спецификация и цвет захватываются в композабл-контексте:
             // внутри LaunchedEffect/drawBehind вызывать @Composable нельзя.
             val posSpec = motionSpring<Float>(BlokMotion.PILL_LEAD_DAMPING, BlokMotion.PILL_LEAD_STIFFNESS)
-            val indicatorColor = MaterialTheme.colorScheme.primaryContainer
+            val indicatorColor = ctaColors().container
 
             LaunchedEffect(selectedIndex, barWidth) {
                 if (barWidth <= 0 || tabs.isEmpty()) return@LaunchedEffect
@@ -147,11 +159,19 @@ private fun NavItem(
         animationSpec = motionSpring<Float>(BlokMotion.BOUNCY_DAMPING, BlokMotion.BOUNCY_STIFFNESS),
         label = "navIconScale",
     )
-    val tint by animateColorAsState(
-        targetValue = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
+    // Иконка живёт НА лаймовой пилюле (тёмный текст), подпись — ПОД ней
+    // на фоне бара: цвет подписи выбранной вкладки — обычный onSurface.
+    val iconTint by animateColorAsState(
+        targetValue = if (selected) ctaColors().content
         else MaterialTheme.colorScheme.onSurfaceVariant,
         animationSpec = motionColorSpring(BlokMotion.SOFT_DAMPING, BlokMotion.SOFT_STIFFNESS),
-        label = "navTint",
+        label = "navIconTint",
+    )
+    val labelTint by animateColorAsState(
+        targetValue = if (selected) MaterialTheme.colorScheme.onSurface
+        else MaterialTheme.colorScheme.onSurfaceVariant,
+        animationSpec = motionColorSpring(BlokMotion.SOFT_DAMPING, BlokMotion.SOFT_STIFFNESS),
+        label = "navLabelTint",
     )
     Column(
         modifier
@@ -165,7 +185,7 @@ private fun NavItem(
             Icon(
                 imageVector = tab.icon,
                 contentDescription = tab.label,
-                tint = tint,
+                tint = iconTint,
                 modifier = Modifier
                     .size(24.dp)
                     .scale(scale),
@@ -174,7 +194,7 @@ private fun NavItem(
         Text(
             text = tab.label,
             style = MaterialTheme.typography.labelMedium,
-            color = tint,
+            color = labelTint,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
         )
     }

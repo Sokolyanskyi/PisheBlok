@@ -14,6 +14,7 @@ data class LocationEntity(
     val type: String,          // LocationType.name
     val parentId: String?,     // null = root
     val icon: String,          // emoji
+    val iconStyle: Int = 0,    // стиль подачи эмодзи (0..3, см. EmojiGlyph)
     val section: String,       // Section.name
     val sortOrder: Int,
     val updatedAt: Long,
@@ -46,10 +47,12 @@ data class ItemEntity(
 data class ShoppingEntity(
     @PrimaryKey val id: String,
     val name: String,
-    val qty: Double,
+    val qty: Double,           // числовое количество (0, если вписан текст)
+    val qtyNote: String?,      // количество текстом («пару пачек»), null = число
     val unit: String,          // Unit.id
     val done: Boolean = false,
     val priority: String = "URGENT", // ShoppingPriority.name
+    val sortOrder: Long = 0,   // ручной порядок: меньше = выше
     val sourceItemId: String?, // linked inventory item (auto-added from "running low")
     val createdAt: Long,
     val updatedAt: Long,

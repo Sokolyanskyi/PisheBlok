@@ -28,6 +28,20 @@
     <string name="add_subplace">Добавить секцию</string>
     <string name="location_name">Название</string>
     <string name="choose_icon">Иконка</string>
+    <string name="icon_style">Стиль эмодзи</string>
+    <string name="label_room">Комната</string>
+    <string name="label_floor">Этаж</string>
+    <string name="label_section">Секция</string>
+    <string name="row_actions">Действия</string>
+    <string name="item_more">Дополнительно</string>
+    <string name="icon_none">Без иконки</string>
+    <string name="icon_cat_all">Все</string>
+    <string name="icon_cat_food">Еда</string>
+    <string name="icon_cat_kitchen">Кухня</string>
+    <string name="icon_cat_house">Быт</string>
+    <string name="icon_cat_rooms">Комнаты</string>
+    <string name="label_place">Место</string>
+    <string name="icon_animated">Анимированные</string>
 
     <!-- Empty states -->
     <string name="empty_rooms_title">Комнат пока нет</string>
@@ -109,8 +123,10 @@
     <string name="empty_buy_subtitle">Добавьте вручную или из «Заканчивается»</string>
     <string name="restock_snack">Отмечено как куплено</string>
     <string name="restock_action">Добавить %1$s на склад</string>
+    <string name="restock_no_qty">Добавить на склад</string>
     <string name="buy_name_label">Название</string>
     <string name="buy_qty_label">Количество</string>
+    <string name="qty_or_note">Количество или заметка</string>
 
     <!-- Auth -->
     <string name="auth_welcome">Добро пожаловать в ПищеБлок</string>

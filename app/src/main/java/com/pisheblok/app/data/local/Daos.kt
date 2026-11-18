@@ -49,7 +49,7 @@ interface ItemDao {
     suspend fun byId(id: String): ItemEntity?
 
     /** One row per distinct name — used for quick-add suggestions. */
-    @Query("SELECT * FROM items WHERE section = :section GROUP BY name ORDER BY MAX(updatedAt) DESC LIMIT 50")
+    @Query("SELECT * FROM items WHERE isDeleted = 0 AND section = :section GROUP BY name ORDER BY MAX(updatedAt) DESC LIMIT 50")
     fun suggestions(section: String): Flow<List<ItemEntity>>
 
     @Query("SELECT * FROM items WHERE dirty = 1")
@@ -68,11 +68,14 @@ interface ItemDao {
 @Dao
 interface ShoppingDao {
 
-    @Query("SELECT * FROM shopping WHERE isDeleted = 0 ORDER BY done, createdAt DESC")
+    @Query("SELECT * FROM shopping WHERE isDeleted = 0 ORDER BY done, sortOrder, createdAt DESC")
     fun observeAll(): Flow<List<ShoppingEntity>>
 
     @Query("SELECT * FROM shopping WHERE id = :id")
     suspend fun byId(id: String): ShoppingEntity?
+
+    @Query("SELECT MIN(sortOrder) FROM shopping WHERE isDeleted = 0")
+    suspend fun minSortOrder(): Long?
 
     @Query("SELECT * FROM shopping WHERE dirty = 1")
     suspend fun dirty(): List<ShoppingEntity>

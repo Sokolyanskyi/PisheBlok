@@ -1,4 +1,4 @@
-plugins {
+﻿plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("com.google.devtools.ksp")
@@ -12,8 +12,8 @@ android {
         applicationId = "com.pisheblok.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 14
-        versionName = "1.3.0"
+        versionCode = 20
+        versionName = "1.4.5"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         resourceConfigurations += listOf("en", "ru", "uk")
     }

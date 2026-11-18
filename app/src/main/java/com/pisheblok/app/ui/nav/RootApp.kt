@@ -56,19 +56,18 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -102,6 +101,7 @@ import com.pisheblok.app.ui.shopping.ShoppingScreen
 import com.pisheblok.app.ui.theme.LocalSchemeState
 import com.pisheblok.app.ui.theme.ThemeScheme
 import com.pisheblok.app.ui.theme.previewColors
+import kotlinx.coroutines.isActive
 
 private object Routes {
     const val FOOD = "food"
@@ -285,16 +285,37 @@ private fun MainTopBar(
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     val syncing = syncStatus is SyncStatus.Syncing
+    val motionOn = LocalMotionEnabled.current
 
-    val rotation = if (syncing) {
-        val transition = rememberInfiniteTransition(label = "sync")
-        transition.animateFloat(
-            initialValue = 0f,
-            targetValue = 360f,
-            animationSpec = infiniteRepeatable(tween(1200, easing = LinearEasing)),
-            label = "syncRotation",
-        ).value
-    } else 0f
+    // Вращение «облака» — постоянный Animatable вместо пересоздаваемого
+    // infinite-перехода: без телепорта иконки с ~300° на 0° при окончании
+    // синка и без рестарта с нуля при каждом новом синке.
+    val rotation = remember { Animatable(0f) }
+    LaunchedEffect(syncing, motionOn) {
+        if (!motionOn) {
+            rotation.snapTo(0f)
+            return@LaunchedEffect
+        }
+        if (syncing) {
+            while (isActive) {
+                // Защита от накопления float: раз в цикл нормализуем угол.
+                if (rotation.value >= 360_000f) rotation.snapTo(rotation.value % 360f)
+                rotation.animateTo(
+                    rotation.value + 360f,
+                    tween(1200, easing = LinearEasing),
+                )
+            }
+        } else {
+            // Докрутить до ближайшей «верха» — иконка останавливается ровно.
+            val tail = rotation.value % 360f
+            if (tail != 0f) {
+                rotation.animateTo(
+                    rotation.value + (360f - tail),
+                    tween(200, easing = LinearEasing),
+                )
+            }
+        }
+    }
 
     val syncIcon = when {
         !authState.cloudReady -> Icons.Rounded.CloudOff
@@ -308,17 +329,20 @@ private fun MainTopBar(
     TopAppBar(
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                // Логотип-кружок на лайме — как цветной логотип референса.
                 Box(
                     modifier = Modifier
-                        .size(30.dp)
-                        .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                        .size(32.dp)
+                        .background(MaterialTheme.colorScheme.primary, CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text("🥘", fontSize = 15.sp)
+                    Text("🥘", fontSize = 16.sp)
                 }
                 Spacer(Modifier.width(10.dp))
                 Text(
                     stringResource(R.string.app_name),
+                    // Бренд — логотип, а не заголовок: он не должен
+                    // конкурировать с H1 секции.
                     style = MaterialTheme.typography.titleLarge,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -326,13 +350,22 @@ private fun MainTopBar(
             }
         },
         actions = {
+            // Статус синхронизации читается цветом, а не только формой иконки.
+            val syncTint = when {
+                syncStatus is SyncStatus.Error -> MaterialTheme.colorScheme.error
+                syncStatus is SyncStatus.Offline -> MaterialTheme.colorScheme.tertiary
+                syncStatus is SyncStatus.Syncing -> MaterialTheme.colorScheme.primary
+                !authState.cloudReady -> MaterialTheme.colorScheme.tertiary
+                else -> MaterialTheme.colorScheme.onSurfaceVariant
+            }
             Icon(
                 syncIcon,
                 contentDescription = stringResource(R.string.cd_sync),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                tint = syncTint,
+                // rotationZ читается в graphicsLayer — без рекомпозиции на кадр.
                 modifier = Modifier
                     .padding(end = 4.dp)
-                    .rotate(rotation),
+                    .graphicsLayer { rotationZ = rotation.value },
             )
             Box {
                 IconButton(onClick = { menuOpen = true }) {
@@ -380,7 +413,7 @@ private fun MainTopBar(
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.surface,
+            containerColor = MaterialTheme.colorScheme.background,
         ),
     )
 }

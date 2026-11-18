@@ -30,6 +30,7 @@ data class LocationUi(
     val id: String,
     val name: String,
     val icon: String,
+    val iconStyle: Int = 0,
     val type: LocationType,
     val itemCount: Int,
     val lowCount: Int,
@@ -165,7 +166,8 @@ class LocationsViewModel(
 
     fun backTo(index: Int) {
         summaryFilter.value = null
-        pathIds.value = pathIds.value.take(index)
+        // index — индекс крошки в пути: останавливаемся НА этом уровне.
+        pathIds.value = pathIds.value.take(index + 1)
     }
 
     fun setSearch(active: Boolean, q: String = "") {
@@ -180,17 +182,17 @@ class LocationsViewModel(
 
     // ---------- locations ----------
 
-    fun addLocation(name: String, icon: String) {
+    fun addLocation(name: String, icon: String, iconStyle: Int = 0) {
         val depth = pathIds.value.size
         viewModelScope.launch {
-            repo.addLocation(name, icon, addType(section, depth), pathIds.value.lastOrNull(), section)
+            repo.addLocation(name, icon, iconStyle, addType(section, depth), pathIds.value.lastOrNull(), section)
         }
     }
 
-    fun updateLocation(id: String, name: String, icon: String) {
+    fun updateLocation(id: String, name: String, icon: String, iconStyle: Int = 0) {
         viewModelScope.launch {
             val e = repo.getLocation(id) ?: return@launch
-            repo.updateLocation(e, name, icon)
+            repo.updateLocation(e, name, icon, iconStyle)
         }
     }
 
@@ -245,9 +247,9 @@ class LocationsViewModel(
     }
 
     /** Adds the item to the "Buy" list with the chosen quantity and priority. */
-    fun addBuy(item: ItemUi, qty: Double, urgent: Boolean) {
+    fun addBuy(item: ItemUi, qty: Double, qtyNote: String?, urgent: Boolean) {
         viewModelScope.launch {
-            repo.addShopping(item.name, qty, item.unit, if (urgent) ShoppingPriority.URGENT else ShoppingPriority.LATER, item.id)
+            repo.addShopping(item.name, qty, qtyNote, item.unit, if (urgent) ShoppingPriority.URGENT else ShoppingPriority.LATER, item.id)
         }
     }
 
@@ -284,7 +286,10 @@ class LocationsViewModel(
             .map { c ->
                 val ids = subtreeIds(c.id)
                 val its = items.filter { !it.isDeleted && it.locationId in ids }
-                LocationUi(c.id, c.name, c.icon, LocationType.valueOf(c.type), its.size, its.count { it.qty <= it.minQty })
+                LocationUi(
+                    c.id, c.name, c.icon, c.iconStyle,
+                    LocationType.valueOf(c.type), its.size, its.count { it.qty <= it.minQty },
+                )
             }
 
         val itemsHere = currentId?.let { itemsByLoc[it].orEmpty() } ?: emptyList()
@@ -392,11 +397,15 @@ class LocationsViewModel(
             }
         }
 
-        fun iconSetFor(section: Section, depth: Int): List<String> = when {
-            section == Section.CHEM && depth == 0 -> com.pisheblok.app.ui.components.ICONS_FLOORS
+        /** Подпись-лейбл на Tutorial-карточке: Комната / Этаж / Место / Секция. */
+        fun typeLabelRes(section: Section, depth: Int): Int = when {
+            section == Section.CHEM && depth == 0 -> R.string.label_floor
             (section == Section.FOOD && depth == 0) || (section == Section.CHEM && depth == 1) ->
-                com.pisheblok.app.ui.components.ICONS_ROOMS
-            else -> com.pisheblok.app.ui.components.ICONS_PLACES
+                R.string.label_room
+            // Внутри холодильника кнопка говорит «Добавить секцию» — и
+            // карточка подписана так же, а не «Место».
+            section == Section.FOOD && depth >= 2 -> R.string.label_section
+            else -> R.string.label_place
         }
     }
 }

@@ -22,7 +22,12 @@ class AppContainer(app: Application) {
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     val database: AppDatabase = Room.databaseBuilder(app, AppDatabase::class.java, "pisheblok.db")
-        .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3)
+        .addMigrations(
+            AppDatabase.MIGRATION_1_2,
+            AppDatabase.MIGRATION_2_3,
+            AppDatabase.MIGRATION_3_4,
+            AppDatabase.MIGRATION_4_5,
+        )
         .fallbackToDestructiveMigration()
         .build()
 
@@ -33,6 +38,11 @@ class AppContainer(app: Application) {
 
     init {
         sync.start()
+        // Одноразовая миграция старых статичных эмодзи на анимированную
+        // библиотеку (идемпотентна: уже перенесённые не трогает).
+        appScope.launch {
+            repository.migrateOldEmojiIcons()
+        }
         // keep the home-screen widget in sync with local data changes
         appScope.launch {
             repository.changes.debounce(3000).collect {

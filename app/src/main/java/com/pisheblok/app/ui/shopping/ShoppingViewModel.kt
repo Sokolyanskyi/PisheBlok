@@ -20,6 +20,7 @@ data class BuyUi(
     val id: String,
     val name: String,
     val qty: Double,
+    val qtyNote: String?,  // количество текстом («пару пачек»), null = число
     val unit: QuantityUnit,
     val done: Boolean,
     val urgent: Boolean,
@@ -46,16 +47,16 @@ class ShoppingViewModel(
         buildState(items, locs, shopping)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ShoppingState())
 
-    fun addManual(name: String, qty: Double, unit: QuantityUnit, urgent: Boolean) {
+    fun addManual(name: String, qty: Double, qtyNote: String?, unit: QuantityUnit, urgent: Boolean) {
         viewModelScope.launch {
-            repo.addShopping(name, qty, unit, if (urgent) ShoppingPriority.URGENT else ShoppingPriority.LATER, null)
+            repo.addShopping(name, qty, qtyNote, unit, if (urgent) ShoppingPriority.URGENT else ShoppingPriority.LATER, null)
         }
     }
 
     /** Adds an inventory item to the buy list with the chosen quantity. */
-    fun addFromItem(item: ItemUi, qty: Double, urgent: Boolean) {
+    fun addFromItem(item: ItemUi, qty: Double, qtyNote: String?, urgent: Boolean) {
         viewModelScope.launch {
-            repo.addShopping(item.name, qty, item.unit, if (urgent) ShoppingPriority.URGENT else ShoppingPriority.LATER, item.id)
+            repo.addShopping(item.name, qty, qtyNote, item.unit, if (urgent) ShoppingPriority.URGENT else ShoppingPriority.LATER, item.id)
         }
     }
 
@@ -83,10 +84,20 @@ class ShoppingViewModel(
         }
     }
 
-    fun updateEntry(entryId: String, name: String, qty: Double, unit: QuantityUnit, urgent: Boolean) {
+    fun updateEntry(entryId: String, name: String, qty: Double, qtyNote: String?, unit: QuantityUnit, urgent: Boolean) {
         viewModelScope.launch {
             val e = repo.localShoppingById(entryId) ?: return@launch
-            repo.updateShopping(e, name, qty, unit, if (urgent) ShoppingPriority.URGENT else ShoppingPriority.LATER)
+            repo.updateShopping(e, name, qty, qtyNote, unit, if (urgent) ShoppingPriority.URGENT else ShoppingPriority.LATER)
+        }
+    }
+
+    /**
+     * Drag-and-drop записи: в другую секцию и/или на позицию перед
+     * [beforeId] (null — в конец секции).
+     */
+    fun moveEntry(entryId: String, urgent: Boolean, beforeId: String?) {
+        viewModelScope.launch {
+            repo.moveShopping(entryId, if (urgent) ShoppingPriority.URGENT else ShoppingPriority.LATER, beforeId)
         }
     }
 
@@ -131,15 +142,20 @@ class ShoppingViewModel(
                     .thenBy { it.name }
             )
 
-        // Невыполненные — сверху в порядке добавления (новые вперёд),
-        // выполненные опускаются в конец секции.
+        // Порядок: выполненные тонут в конец, дальше — ручной sortOrder
+        // (перетаскивание), новые добавленные — сверху (min sortOrder).
         val all = shopping
-            .sortedWith(compareBy<ShoppingEntity> { it.done }.thenByDescending { it.createdAt })
+            .sortedWith(
+                compareBy<ShoppingEntity> { it.done }
+                    .thenBy { it.sortOrder }
+                    .thenByDescending { it.createdAt }
+            )
             .map {
                 BuyUi(
                     id = it.id,
                     name = it.name,
                     qty = it.qty,
+                    qtyNote = it.qtyNote?.ifBlank { null },
                     unit = QuantityUnit.fromId(it.unit),
                     done = it.done,
                     urgent = it.priority != "LATER",
